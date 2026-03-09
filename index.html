@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>A4 物理排版 · 长公式智能缩放版 (V31)</title>
+    <title>A4 物理排版 · 人工干预版 (V36)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -42,6 +42,7 @@
         textarea { width: 100%; height: 220px; padding: 15px; font-size: 15px; line-height: 1.5; border: 1px solid #ccc; border-radius: 8px; resize: none; }
 
         button { padding: 15px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        button:disabled { cursor: not-allowed; }
 
         #capture-zone { position: absolute; top: 0; left: -9999px; width: 800px; }
 
@@ -49,14 +50,13 @@
         #master-box {
             width: 678px; 
             font-size: 21px;
-            line-height: 60px !important;          /* 铁打的行高 */
+            line-height: 60px !important; 
             text-align: left;
             line-break: strict; 
             overflow-wrap: break-word;
             color: #111;
             padding-bottom: 20px;
         }
-        /* 所有子元素继承行高，同时清除可能的外加边距 */
         #master-box * {
             line-height: 60px !important;
             margin-top: 0;
@@ -64,17 +64,15 @@
             padding-top: 0;
             padding-bottom: 0;
         }
-        /* 图片特殊处理：垂直居中，最大高度不超过行高，以免撑开行框（长公式缩放后会临时移除限制） */
         #master-box img {
             vertical-align: middle !important;
-            max-height: 60px;                /* 默认限制高度，长公式缩放后可能覆盖此规则 */
+            max-height: 60px;
             width: auto;
             object-fit: contain;
         }
-        /* 对于用户上传的配图（浮动大图），保留浮动，取消高度限制，由内联样式控制 */
         #master-box img.uploaded-float {
             float: right;
-            max-height: 300px !important;     /* 覆盖全局限制，保证图片完整显示 */
+            max-height: 300px !important;
             margin: 0 0 10px 20px;
             background: white;
             border-radius: 4px;
@@ -106,7 +104,6 @@
         .sliced-content { width: 100%; font-size: 21px; line-height: 60px; text-align: left; line-break: strict; }
         .highlight { color: #d32f2f; }
         
-        /* 数学图片（公式转来）默认受全局img限制，长公式缩放后会临时覆盖max-height */
         .math-img { 
             margin: 0; 
             padding: 0; 
@@ -123,8 +120,8 @@
     <div id="capture-zone"></div>
 
     <div class="input-section">
-        <h3 style="text-align: center; margin-bottom: 5px;">🚀 A4 物理排版 V31</h3>
-        <p style="text-align: center; font-size: 12px; color: #666; margin-top: 0;">(长公式自动缩放 + 文字环绕图片)</p>
+        <h3 style="text-align: center; margin-bottom: 5px;">🚀 A4 物理排版 V36</h3>
+        <p style="text-align: center; font-size: 12px; color: #666; margin-top: 0;">(支持使用 \\ 强制人工换行 · 自动排满页面)</p>
         
         <input type="file" id="image-upload" accept="image/*" style="display: none;">
         <div class="upload-btn" onclick="document.getElementById('image-upload').click()">
@@ -136,7 +133,7 @@
             <input type="range" id="img-scale" min="100" max="400" step="5" value="250">
         </div>
 
-        <textarea id="ai-input" placeholder="请将 AI 输出的纯文本解析复制粘贴到这里..."></textarea>
+        <textarea id="ai-input" placeholder="请将 AI 输出的纯文本解析复制粘贴到这里... \n排版不佳时，在非公式区域使用 \\ 可强制换行！"></textarea>
         <button onclick="generateFinalImages()" id="gen-btn">⚡ 一键自动排版并生成图片</button>
     </div>
 
@@ -176,9 +173,6 @@
 
         document.getElementById('img-scale').addEventListener('input', function(e) { imageWidth = e.target.value; });
 
-        // ==========================================
-        // 核武器：将活公式变成静态PNG，并智能缩放超长公式
-        // ==========================================
         async function convertMathToPNG(containerNode, containerWidth) {
             const mjxContainers = containerNode.querySelectorAll('mjx-container');
             const tmpCanvas = document.createElement('canvas');
@@ -189,24 +183,20 @@
                 const svg = mjx.querySelector('svg');
                 if (!svg) continue;
 
-                // 获取原始渲染尺寸（精确到小数）
                 const rect = svg.getBoundingClientRect();
                 let pxW = rect.width;
                 let pxH = rect.height;
 
                 if (pxW === 0 || pxH === 0) continue;
 
-                // 保存原始宽高属性，以便恢复
                 const originalWidth = svg.getAttribute('width');
                 const originalHeight = svg.getAttribute('height');
 
-                // 判断是否为超长公式（超过容器宽度的95%）
-                const MAX_WIDTH = containerWidth * 0.95; // 留一点边距
+                const MAX_WIDTH = containerWidth * 0.95; 
                 let needScale = pxW > MAX_WIDTH;
                 let finalWidth, finalHeight, scaleFactor;
 
                 if (needScale) {
-                    // 需要缩放至容器宽度
                     scaleFactor = containerWidth / pxW;
                     finalWidth = containerWidth;
                     finalHeight = pxH * scaleFactor;
@@ -215,15 +205,13 @@
                     finalHeight = pxH;
                 }
 
-                // 为了渲染清晰，用3倍分辨率绘制
                 const renderScale = 3;
                 svg.setAttribute('width', (pxW * renderScale) + 'px');
                 svg.setAttribute('height', (pxH * renderScale) + 'px');
 
                 let svgString = new XMLSerializer().serializeToString(svg);
-                svgString = svgString.replace(/currentColor/g, '#111'); // 强制黑色
+                svgString = svgString.replace(/currentColor/g, '#111'); 
 
-                // 恢复原始尺寸属性
                 svg.setAttribute('width', originalWidth);
                 svg.setAttribute('height', originalHeight);
 
@@ -232,7 +220,6 @@
                 await new Promise((resolve) => {
                     const img = new Image();
                     img.onload = () => {
-                        // 绘制到canvas (3倍大小)
                         tmpCanvas.width = pxW * renderScale;
                         tmpCanvas.height = pxH * renderScale;
                         ctx.clearRect(0, 0, tmpCanvas.width, tmpCanvas.height);
@@ -242,18 +229,14 @@
                         pngImg.src = tmpCanvas.toDataURL('image/png');
                         pngImg.className = 'math-img';
 
-                        // 设置最终显示尺寸
                         pngImg.style.width = finalWidth + 'px';
                         pngImg.style.height = finalHeight + 'px';
                         pngImg.style.verticalAlign = 'middle';
 
                         if (needScale) {
-                            // 超长公式：移除max-height限制，避免图片被压扁
                             pngImg.style.maxHeight = 'none';
-                            // 可选：添加一点下边距，避免与下行文字紧贴
                             pngImg.style.marginBottom = '0';
                         } else {
-                            // 正常公式：维持max-height=60px，防止过高
                             pngImg.style.maxHeight = '60px';
                         }
 
@@ -272,19 +255,33 @@
             
             if (!rawText && !pastedImageSrc) { return alert("请先粘贴解析文本或图片！"); }
 
-            btn.innerText = "⏳ 正在转换防乱码图像，请稍候...";
+            btn.innerText = "⏳ 正在拼命排版中，请稍候...";
             btn.style.backgroundColor = "#6c757d";
             btn.disabled = true;
 
             try {
+                // 强制让出主线程，确保上方的UI状态一定能渲染出来
+                await new Promise(r => setTimeout(r, 100));
+
                 const captureZone = document.getElementById('capture-zone');
                 captureZone.innerHTML = ''; 
 
                 const masterBox = document.createElement('div');
                 masterBox.id = 'master-box';
                 
+                // ========== 保护公式并提取手动换行符 ==========
+                // 按 $ 和 $$ 保护区域进行切割
+                let parts = rawText.split(/(\$\$[\s\S]*?\$\$|\$[^$]*?\$)/g);
+                for (let i = 0; i < parts.length; i++) {
+                    if (!parts[i].startsWith('$')) {
+                        // 在非公式区域，将 \\ 替换为特有的占位符
+                        parts[i] = parts[i].replace(/\\\\/g, '【MANUAL_BR】');
+                    }
+                }
+                let safeText = parts.join('');
+                
                 let periodCount = 0;
-                let htmlText = rawText
+                let htmlText = safeText
                     .replace(/【解析】/g, '')
                     .replace(/【答案】/g, '')
                     .replace(/\n/g, '') 
@@ -293,14 +290,13 @@
                         periodCount++;
                         return periodCount % 3 === 0 ? match + '<br>' : match; 
                     })
-                    // 将公式和标点绑定在一起，防止孤立换行
                     .replace(/(\${1,2}[^$]+\${1,2})\s*([，。、；：？！,.;:?!]+)/g, '<span style="white-space: nowrap;">$1$2</span>') 
                     .replace(/<red>/g, '<span class="highlight">')
                     .replace(/<\/red>/g, '</span>')
+                    .replace(/【MANUAL_BR】/g, '<br>') // 将提取出来的人工换行还原为真实换行标签
                     .replace(/(<br>)+/g, '<br>')
                     .replace(/^<br>|<br>$/g, '');
 
-                // 处理图片：如果存在上传图片，加上 uploaded-float 类，并且不要添加清除浮动的元素
                 let imgHTML = '';
                 if (pastedImageSrc) {
                     imgHTML = `<img src="${pastedImageSrc}" class="uploaded-float" style="width: ${imageWidth}px; max-height: 300px; float: right; margin: 0 0 10px 20px; background: white; border-radius: 4px;">`;
@@ -309,39 +305,100 @@
                 masterBox.innerHTML = imgHTML + htmlText;
                 captureZone.appendChild(masterBox);
 
-                // 1. 让 MathJax 渲染真实的 SVG 公式
                 if (window.MathJax) {
+                    if (typeof MathJax.typesetPromise !== 'function') {
+                        throw new Error("公式渲染引擎仍在后台加载，请等几秒钟再点一次！");
+                    }
                     await MathJax.typesetPromise([masterBox]);
-                    // 2. 把公式变成静态图片，传入容器宽度 (masterBox 的 clientWidth 约为 678px)
-                    const containerWidth = masterBox.clientWidth; // 实际渲染宽度
+                    const containerWidth = masterBox.clientWidth; 
                     await convertMathToPNG(masterBox, containerWidth);
                 }
 
-                // 额外安全措施：遍历所有图片，确保浮动图片不受影响，普通公式图片已处理
+                await new Promise(resolve => requestAnimationFrame(resolve));
+
                 masterBox.querySelectorAll('img').forEach(img => {
                     if (!img.classList.contains('uploaded-float')) {
-                        // 如果不是浮动图片，确保vertical-align middle
                         img.style.verticalAlign = 'middle';
                     }
                 });
 
-                // 获取总高度 (此时行高固定60，浮动图片可能撑高容器，但行框依然60)
-                const totalHeight = masterBox.offsetHeight;
-                let currentOffset = 0;
-                let pageNum = 1;
-                const pages = [];
+                const masterRect = masterBox.getBoundingClientRect();
+                const images = masterBox.querySelectorAll('img');
+                const imagesPos = [];
+                images.forEach(img => {
+                    const rect = img.getBoundingClientRect();
+                    const top = rect.top - masterRect.top;
+                    const bottom = top + rect.height;
+                    imagesPos.push({ top, bottom });
+                });
 
-                // 开始切片分页
-                while (currentOffset < totalHeight) {
+                const totalHeight = masterBox.offsetHeight;
+                if (totalHeight === 0) throw new Error("文本处理异常，未检测到有效内容高度。");
+
+                const pageHeights = [780, 1020, 1020, 1020, 1020, 1020, 1020, 1020]; 
+
+                // ========== 分页计算逻辑 ==========
+                const pageStarts = [0];
+                let currentPage = 0;
+                let loopGuard = 0; 
+
+                while (true) {
+                    loopGuard++;
+                    if (loopGuard > 100) throw new Error("触发分页循环保护，文案内容可能过长或存在排版冲突。");
+
+                    const start = pageStarts[currentPage];
+                    if (start >= totalHeight) break;
+                    
+                    const boxHeight = pageHeights[currentPage] || 1020; 
+                    // 恢复全高排版：不再硬性减去60px，让内容排满当前页
+                    const usableHeight = boxHeight; 
+                    const theoreticalEnd = start + usableHeight;
+
+                    let minCrossTop = theoreticalEnd;
+                    for (let img of imagesPos) {
+                        if (img.top < theoreticalEnd - 15 && img.bottom > theoreticalEnd + 15) {
+                            if (img.top < minCrossTop) minCrossTop = img.top;
+                        }
+                    }
+
+                    let actualEnd;
+                    if (minCrossTop < theoreticalEnd) {
+                        actualEnd = Math.floor(minCrossTop / 60) * 60;
+                        if (actualEnd <= start) {
+                            actualEnd = start + 60; 
+                        }
+                    } else {
+                        actualEnd = theoreticalEnd;
+                    }
+
+                    if (actualEnd > totalHeight) actualEnd = totalHeight;
+
+                    pageStarts.push(actualEnd);
+                    currentPage++;
+                    if (actualEnd >= totalHeight) break;
+                }
+
+                const pages = [];
+                for (let i = 0; i < pageStarts.length - 1; i++) {
+                    const start = pageStarts[i];
+                    const end = pageStarts[i + 1];
+                    const contentDisplayHeight = end - start; 
+                    
                     let pageDiv = document.createElement('div');
                     pageDiv.className = 'page-container';
 
+                    let contentWrapper = document.createElement('div');
+                    contentWrapper.style.height = contentDisplayHeight + 'px';
+                    contentWrapper.style.overflow = 'hidden';
+
                     let contentClone = document.createElement('div');
                     contentClone.className = 'sliced-content';
-                    contentClone.style.marginTop = `-${currentOffset}px`;
+                    contentClone.style.marginTop = `-${start}px`;
                     contentClone.innerHTML = masterBox.innerHTML; 
+                    
+                    contentWrapper.appendChild(contentClone);
 
-                    if (pageNum === 1) {
+                    if (i === 0) {
                         pageDiv.innerHTML = `
                             <div class="custom-box ans-box">
                                 <div class="custom-legend">答案</div>
@@ -354,8 +411,7 @@
                                 <div class="ruled-content p1"></div>
                             </div>
                         `;
-                        pageDiv.querySelector('.p1').appendChild(contentClone);
-                        currentOffset += 780; 
+                        pageDiv.querySelector('.p1').appendChild(contentWrapper);
                     } else {
                         pageDiv.innerHTML = `
                             <div class="custom-box exp-box" style="margin-bottom: 0;">
@@ -363,20 +419,17 @@
                                 <div class="ruled-content p2"></div>
                             </div>
                         `;
-                        pageDiv.querySelector('.p2').appendChild(contentClone);
-                        currentOffset += 1020; 
+                        pageDiv.querySelector('.p2').appendChild(contentWrapper);
                     }
                     captureZone.appendChild(pageDiv);
                     pages.push(pageDiv);
-                    pageNum++;
                 }
 
                 await new Promise(r => setTimeout(r, 200));
 
                 const outputArea = document.getElementById('mobile-output-area');
-                outputArea.innerHTML = '<h3 style="color: #e53935; text-align: center;">👇 排版完成！长按保存（长公式已自动缩放）👇</h3>';
+                outputArea.innerHTML = '<h3 style="color: #e53935; text-align: center;">👇 排版完成！长按保存（图片已防截断）👇</h3>';
 
-                // 截图：所有公式已转为图片，浮动图片正常环绕
                 for (let i = 0; i < pages.length; i++) {
                     const canvas = await html2canvas(pages[i], { 
                         scale: 2, 
@@ -396,7 +449,7 @@
                 outputArea.scrollIntoView({ behavior: 'smooth' });
 
             } catch (e) {
-                alert("排版时发生错误：" + e.message);
+                alert("⛔ 运行发生错误：\n" + e.message);
                 btn.innerText = "⚡ 一键自动排版并生成图片";
                 btn.style.backgroundColor = "#007bff";
                 btn.disabled = false;

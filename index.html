@@ -72,7 +72,9 @@
     }
     #master-box img.uploaded-float {
         float: right;
-        max-height: 300px !important;
+        /* 修改：移除 max-height 限制，并强制高度自适应以保持比例 */
+        height: auto !important; 
+        max-height: none !important;
         margin: 0 0 10px 20px;
         background: white;
         border-radius: 4px;
@@ -156,7 +158,8 @@
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     pastedImageSrc = event.target.result;
-                    document.getElementById('preview-img-container').innerHTML = `<img src="${pastedImageSrc}" style="max-height: 80px; border-radius: 4px; vertical-align: middle;"> <span style="font-size: 14px; margin-left: 10px;">已加载</span>`;
+                    /* 修改：添加 width: auto 确保预览图比例正常 */
+                    document.getElementById('preview-img-container').innerHTML = `<img src="${pastedImageSrc}" style="max-height: 80px; width: auto; border-radius: 4px; vertical-align: middle;"> <span style="font-size: 14px; margin-left: 10px;">已加载</span>`;
                 };
                 reader.readAsDataURL(file);
             }
@@ -170,7 +173,8 @@
                     const reader = new FileReader();
                     reader.onload = function(event) {
                         pastedImageSrc = event.target.result;
-                        document.getElementById('preview-img-container').innerHTML = `<img src="${pastedImageSrc}" style="max-height: 80px; border-radius: 4px; vertical-align: middle;"> <span style="font-size: 14px; margin-left: 10px;">已加载</span>`;
+                        /* 修改：添加 width: auto 确保预览图比例正常 */
+                        document.getElementById('preview-img-container').innerHTML = `<img src="${pastedImageSrc}" style="max-height: 80px; width: auto; border-radius: 4px; vertical-align: middle;"> <span style="font-size: 14px; margin-left: 10px;">已加载</span>`;
                     };
                     reader.readAsDataURL(blob);
                     break;
@@ -306,7 +310,8 @@
 
                 let imgHTML = '';
                 if (pastedImageSrc) {
-                    imgHTML = `<img src="${pastedImageSrc}" class="uploaded-float" style="width: ${imageWidth}px; max-height: 300px; float: right; margin: 0 0 10px 20px; background: white; border-radius: 4px;">`;
+                    /* 修改：将内联样式中的 max-height: 300px 改为了 height: auto，彻底解决拉伸变形问题 */
+                    imgHTML = `<img src="${pastedImageSrc}" class="uploaded-float" style="width: ${imageWidth}px; height: auto; float: right; margin: 0 0 10px 20px; background: white; border-radius: 4px;">`;
                 }
 
                 masterBox.innerHTML = imgHTML + htmlText;

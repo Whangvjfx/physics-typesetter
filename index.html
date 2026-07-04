@@ -16,6 +16,15 @@
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-svg.js"></script>
 
 <style>
+    /* ===== 新增：加载自定义手写字体 ===== */
+    @font-face {
+        font-family: 'MyHandwriting';
+        src: url('myfont.woff2') format('woff2'); 
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap; 
+    }
+
     * { box-sizing: border-box; }
     
     body {
@@ -80,10 +89,10 @@
         border-radius: 4px;
     }
 
-    /* ===== 新增：设置所有最终输出文字为楷体 ===== */
+    /* ===== 修改：设置所有最终输出文字优先使用自定义手写字体，其次为楷体 ===== */
     .page-container, .page-container *,
     #master-box, #master-box * {
-        font-family: "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+        font-family: 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
     }
 
     .page-container {

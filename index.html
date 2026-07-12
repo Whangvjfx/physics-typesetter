@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>A4 物理排版 · 人工干预版 (V36)</title>
+    <title>A4 物理排版 · 人工干预版 (V37)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -95,13 +95,11 @@
         border-radius: 4px;
     }
 
-    /* ===== 修改：设置默认字体为字体1 ===== */
     .page-container, .page-container *,
     #master-box, #master-box * {
         font-family: 'MyHandwriting1', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
     }
 
-    /* ===== 核心修复：提升随机字体类的作用域，确保在 page-container 内生效 ===== */
     span.f1 { font-family: 'MyHandwriting1', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important; }
     span.f2 { font-family: 'MyHandwriting2', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important; }
 
@@ -110,8 +108,6 @@
     }
 
     .custom-box { position: relative; border: 1px solid #666; border-radius: 12px; margin-top: 15px; margin-bottom: 20px; width: 100%; }
-    
-    /* ===== 修改点：针对标题 legends 进行 1.5 倍等比例放大，并调整使其继续保持居中对齐 ===== */
     .custom-legend { position: absolute; top: -18px; left: 20px; background: white; padding: 0 10px; font-size: 27px; color: #333; font-weight: bold; line-height: 36px; }
     
     .ans-box { display: flex; flex-direction: column; padding: 0 20px; }
@@ -150,7 +146,7 @@
     <div id="capture-zone"></div>
 
     <div class="input-section">
-        <h3 style="text-align: center; margin-bottom: 5px;">🚀 A4 物理排版 V36 (双字库随机版)</h3>
+        <h3 style="text-align: center; margin-bottom: 5px;">🚀 A4 物理排版 V37 (双字库随机版)</h3>
         <p style="text-align: center; font-size: 12px; color: #666; margin-top: 0;">(支持使用 \\ 强制人工换行 · 自动排满页面)</p>
         
         <input type="file" id="image-upload" accept="image/*" style="display: none;">
@@ -338,9 +334,10 @@
                             randomizedText += char; 
                         } else {
                             const fontClass = Math.random() < 0.5 ? 'f1' : 'f2';
-                            // ===== 修改点：检测纯中文字符，如果是，则设置1.5em的大小 =====
+                            // ===== 完美对齐修复点：加入 line-height: 21px !important =====
+                            // 这会把放大的字体强制约束在原本的行高盒子中，绝不会再把60px的标准行高撑破
                             if (/[\u4e00-\u9fa5]/.test(char)) {
-                                randomizedText += `<span class="${fontClass}" style="font-size: 1.5em;">${char}</span>`;
+                                randomizedText += `<span class="${fontClass}" style="font-size: 1.5em; line-height: 21px !important;">${char}</span>`;
                             } else {
                                 randomizedText += `<span class="${fontClass}">${char}</span>`;
                             }
@@ -454,8 +451,7 @@
                             <div class="custom-box ans-box">
                                 <div class="custom-legend">答案</div>
                                 <div class="ans-row"></div>
-                                <!-- 修改点：见解析同步放大 1.5 倍 -->
-                                <div class="ans-row" style="padding-left: 2em;"><span style="font-size: 1.5em;">见解析</span></div>
+                                <div class="ans-row" style="padding-left: 2em;"><span style="font-size: 1.5em; line-height: 60px !important;">见解析</span></div>
                                 <div class="ans-row"></div>
                             </div>
                             <div class="custom-box exp-box" style="margin-bottom: 0;">

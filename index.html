@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>A4 物理排版 · 人工干预版 (V36)</title>
+    <title>A4 物理排版 · 人工干预版 (V36) - 占满行优化版</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -65,9 +65,11 @@
     /* ===== 核心修复：强制所有行高固定60px，杜绝任何弹性撑开 ===== */
     #master-box {
         width: 678px; 
-        font-size: 21px;
+        font-size: 21px; /* 基础字体大小（控制公式的大小） */
         line-height: 60px !important; 
-        text-align: left;
+        /* 修改：两端对齐，让排版在横向上真正占满整行 */
+        text-align: justify;
+        text-justify: inter-ideograph;
         line-break: strict; 
         overflow-wrap: break-word;
         color: #111;
@@ -101,9 +103,9 @@
         font-family: 'MyHandwriting1', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
     }
 
-    /* ===== 核心修复：提升随机字体类的作用域，确保在 page-container 内生效 ===== */
-    span.f1 { font-family: 'MyHandwriting1', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important; }
-    span.f2 { font-family: 'MyHandwriting2', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important; }
+    /* ===== 核心修复：单独针对汉字 span 放大至 48px（60px 行高的 80% 宽度/高度） ===== */
+    span.f1 { font-family: 'MyHandwriting1', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important; font-size: 48px; }
+    span.f2 { font-family: 'MyHandwriting2', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important; font-size: 48px; }
 
     .page-container {
         width: 800px; height: 1131px; background-color: white; padding: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;
@@ -128,7 +130,8 @@
     .p1 { height: 780px; } 
     .p2 { height: 1020px; } 
 
-    .sliced-content { width: 100%; font-size: 21px; line-height: 60px; text-align: left; line-break: strict; }
+    /* 修改：切片容器也同步开启两端对齐 */
+    .sliced-content { width: 100%; font-size: 21px; line-height: 60px; text-align: justify; text-justify: inter-ideograph; line-break: strict; }
     .highlight { color: #d32f2f; }
     
     .math-img { 
@@ -147,7 +150,7 @@
     <div id="capture-zone"></div>
 
     <div class="input-section">
-        <h3 style="text-align: center; margin-bottom: 5px;">🚀 A4 物理排版 V36 (双字库随机版)</h3>
+        <h3 style="text-align: center; margin-bottom: 5px;">🚀 A4 物理排版 V36 (占满行优化版)</h3>
         <p style="text-align: center; font-size: 12px; color: #666; margin-top: 0;">(支持使用 \\ 强制人工换行 · 自动排满页面)</p>
         
         <input type="file" id="image-upload" accept="image/*" style="display: none;">

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>A4 物理排版 · 单字库精简版 (V40)</title>
+    <title>A4 物理排版 · 单字库精简版 (V41 数字1替换)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <!-- 引入强大的网页转图片库 -->
@@ -128,7 +128,7 @@
     <div id="capture-zone"></div>
 
     <div class="input-section">
-        <h3 style="text-align: center; margin-bottom: 5px;">🚀 A4 物理排版 V40 (单字库精简版)</h3>
+        <h3 style="text-align: center; margin-bottom: 5px;">🚀 A4 物理排版 V41 (单字库+全域1改l版)</h3>
         <p style="text-align: center; font-size: 12px; color: #666; margin-top: 0;">(支持使用 \ 强制人工换行 · 自动排满页面)</p>
         
         <input type="file" id="image-upload" accept="image/*" style="display: none;">
@@ -184,9 +184,13 @@
 
         async function generateFinalImages() {
             const btn = document.getElementById('gen-btn');
-            const rawText = document.getElementById('ai-input').value.trim();
+            let rawText = document.getElementById('ai-input').value.trim();
             
             if (!rawText && !pastedImageSrc) { return alert("请先粘贴解析文本或图片！"); }
+
+            // ====== 核心功能点：在解析开始前，将所有的数字 1 替换为小写字母 l ======
+            // 这能确保不仅普通文本的 1 变更为 l，连同传给公式引擎的表达式中的 1 也会变为 l
+            rawText = rawText.replace(/1/g, 'l');
 
             btn.innerText = "⏳ 正在拼命排版中，请稍候...";
             btn.style.backgroundColor = "#6c757d";
@@ -241,7 +245,6 @@
                             randomizedText += char; 
                         } else {
                             // 【完美对齐核心】: 使用 21px 的自身行高，绝对不撑破父级 60px 的网格！
-                            // 移除了冗余的 Math.random 逻辑，全部统一套用 f1
                             if (/[\u4e00-\u9fa5]/.test(char)) {
                                 randomizedText += `<span class="f1" style="font-size: 1.5em; line-height: 21px !important;">${char}</span>`;
                             } else {

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>A4 物理排版 · 纯正手写版 (V39 完美对齐)</title>
+    <title>A4 物理排版 · 单字库精简版 (V40)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <!-- 引入强大的网页转图片库 -->
@@ -17,15 +17,10 @@
     /* 引入英文手写库 Caveat，专门为数字、英文和公式提供逼真连笔手写效果 */
     @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap');
 
-    /* 定义中文两款网络 Web 字体 */
+    /* 定义中文单款网络 Web 字体 */
     @font-face {
-        font-family: 'MyHandwriting1';
+        font-family: 'MyHandwriting';
         src: url('myfont.woff2') format('woff2'); 
-        font-weight: normal; font-style: normal; font-display: swap; 
-    }
-    @font-face {
-        font-family: 'MyHandwriting2';
-        src: url('font2.woff2') format('woff2'); 
         font-weight: normal; font-style: normal; font-display: swap; 
     }
 
@@ -71,22 +66,21 @@
     /* 优先调用 Caveat 英文手写，没有的再 fallback 给中文手写体 */
     .page-container, .page-container *,
     #master-box, #master-box * {
-        font-family: 'Caveat', 'MyHandwriting1', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+        font-family: 'Caveat', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
     }
 
-    span.f1 { font-family: 'Caveat', 'MyHandwriting1', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important; }
-    span.f2 { font-family: 'Caveat', 'MyHandwriting2', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important; }
+    span.f1 { font-family: 'Caveat', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important; }
 
     /* =======================================================
        KaTeX 专属覆盖：为公式注入纯正的手写灵魂
        ======================================================= */
     .katex {
-        font-family: 'Caveat', 'MyHandwriting1', 'MyHandwriting2', cursive !important;
+        font-family: 'Caveat', 'MyHandwriting', cursive !important;
         font-size: 1.25em !important; 
     }
     /* 解除公式内部的 60px 限制，防止上下标被拉扯破碎 */
     .katex * {
-        font-family: 'Caveat', 'MyHandwriting1', 'MyHandwriting2', 'KaTeX_Math', 'KaTeX_Main', cursive !important;
+        font-family: 'Caveat', 'MyHandwriting', 'KaTeX_Math', 'KaTeX_Main', cursive !important;
         line-height: normal !important; 
     }
     /* 独立公式块 (block math) 的容器基础设定，稍后在 JS 中会被强行锁定为 60 的倍数高度 */
@@ -134,8 +128,8 @@
     <div id="capture-zone"></div>
 
     <div class="input-section">
-        <h3 style="text-align: center; margin-bottom: 5px;">🚀 A4 物理排版 V39 (纯手写+完美对齐版)</h3>
-        <p style="text-align: center; font-size: 12px; color: #666; margin-top: 0;">(支持使用 \\ 强制人工换行 · 自动排满页面)</p>
+        <h3 style="text-align: center; margin-bottom: 5px;">🚀 A4 物理排版 V40 (单字库精简版)</h3>
+        <p style="text-align: center; font-size: 12px; color: #666; margin-top: 0;">(支持使用 \ 强制人工换行 · 自动排满页面)</p>
         
         <input type="file" id="image-upload" accept="image/*" style="display: none;">
         <div class="upload-btn" onclick="document.getElementById('image-upload').click()">
@@ -147,7 +141,8 @@
             <input type="range" id="img-scale" min="100" max="400" step="5" value="250">
         </div>
 
-        <textarea id="ai-input" placeholder="请将 AI 输出的纯文本解析复制粘贴到这里... \n排版不佳时，在非公式区域使用 \\ 可强制换行！"></textarea>
+        <textarea id="ai-input" placeholder="请将 AI 输出的纯文本解析复制粘贴到这里... 
+排版不佳时，在非公式区域使用 \ 可强制换行！"></textarea>
         <button onclick="generateFinalImages()" id="gen-btn">⚡ 一键自动排版并生成图片</button>
     </div>
 
@@ -209,7 +204,7 @@
                 let parts = rawText.split(/(\$\$[\s\S]*?\$\$|\$[^$]*?\$)/g);
                 for (let i = 0; i < parts.length; i++) {
                     if (!parts[i].startsWith('$')) {
-                        parts[i] = parts[i].replace(/\\\\/g, '【MANUAL_BR】');
+                        parts[i] = parts[i].replace(/\\/g, '【MANUAL_BR】');
                     }
                 }
                 let safeText = parts.join('');
@@ -231,7 +226,7 @@
                     .replace(/(<br>)+/g, '<br>')
                     .replace(/^<br>|<br>$/g, '');
 
-                // ========== 逐字打散并随机赋予字体，严格加锁 line-height: 21px ==========
+                // ========== 逐字打散并应用单字体，严格加锁 line-height: 21px ==========
                 const tokenRegex = /(<[^>]+>)|(\$\$[\s\S]*?\$\$|\$[^$]*?\$)|([\s\S])/g;
                 let randomizedText = '';
                 let match;
@@ -245,13 +240,12 @@
                         if (char.trim() === '' || char === '\n') {
                             randomizedText += char; 
                         } else {
-                            const fontClass = Math.random() < 0.5 ? 'f1' : 'f2';
-                            
                             // 【完美对齐核心】: 使用 21px 的自身行高，绝对不撑破父级 60px 的网格！
+                            // 移除了冗余的 Math.random 逻辑，全部统一套用 f1
                             if (/[\u4e00-\u9fa5]/.test(char)) {
-                                randomizedText += `<span class="${fontClass}" style="font-size: 1.5em; line-height: 21px !important;">${char}</span>`;
+                                randomizedText += `<span class="f1" style="font-size: 1.5em; line-height: 21px !important;">${char}</span>`;
                             } else {
-                                randomizedText += `<span class="${fontClass}" style="font-size: 1.35em; line-height: 21px !important;">${char}</span>`;
+                                randomizedText += `<span class="f1" style="font-size: 1.35em; line-height: 21px !important;">${char}</span>`;
                             }
                         }
                     }
@@ -291,15 +285,14 @@
                 });
 
                 // ========== 【完美对齐核心】：公式高度强制锁定为 60 的倍数 ==========
-                // 不再依赖底部的 marginBottom 补充，而是直接将容器高度锁死并居中！
                 masterBox.querySelectorAll('.katex-display').forEach(el => {
                     const h = el.offsetHeight;
-                    const targetH = Math.ceil(h / 60) * 60; // 向上取 60 的整数倍
+                    const targetH = Math.ceil(h / 60) * 60; 
                     
                     if(targetH > 0) {
                         el.style.height = targetH + 'px';
                         el.style.display = 'flex';
-                        el.style.alignItems = 'center'; // 垂直居中公式
+                        el.style.alignItems = 'center'; 
                         el.style.margin = '0px !important';
                         el.style.padding = '0px !important';
                     }
@@ -346,7 +339,6 @@
 
                     let actualEnd;
                     if (minCrossTop < theoreticalEnd) {
-                        // 【完美对齐核心】：切割点强行往下取 60 的倍数，绝对不允许偏离横线！
                         actualEnd = Math.floor(minCrossTop / 60) * 60;
                         if (actualEnd <= start) {
                             actualEnd = start + 60; 
@@ -355,7 +347,6 @@
                         actualEnd = theoreticalEnd;
                     }
 
-                    // 最后再加一道保险，保证 actualEnd 是 60 的严格倍数
                     actualEnd = Math.floor(actualEnd / 60) * 60;
 
                     if (actualEnd > totalHeight) actualEnd = totalHeight;
@@ -380,7 +371,7 @@
 
                     let contentClone = document.createElement('div');
                     contentClone.className = 'sliced-content';
-                    contentClone.style.marginTop = `-${start}px`; // 只要 start 是 60 的倍数，绝对精准对齐
+                    contentClone.style.marginTop = `-${start}px`; 
                     contentClone.innerHTML = masterBox.innerHTML; 
                     
                     contentWrapper.appendChild(contentClone);

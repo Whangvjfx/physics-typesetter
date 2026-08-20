@@ -2,8 +2,6 @@ import { generateTypesetImages } from './typesetter.js';
 import {
   triggerHaptic,
   showToast,
-  saveImageToAlbum,
-  batchSaveImagesToAlbum,
   readClipboardText
 } from './native.js';
 
@@ -27,7 +25,6 @@ const genBtn = document.getElementById('gen-btn');
 const outputContainer = document.getElementById('output-container');
 const emptyState = document.getElementById('empty-state');
 const outputCountBadge = document.getElementById('output-count-badge');
-const btnBatchSave = document.getElementById('btn-batch-save');
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightbox-img');
 const lightboxClose = document.getElementById('lightbox-close');
@@ -123,8 +120,6 @@ btnClearAll.addEventListener('click', () => {
   outputContainer.innerHTML = '';
   outputContainer.appendChild(emptyState);
   emptyState.style.display = 'flex';
-  btnBatchSave.style.display = 'none';
-  btnShareAll.style.display = 'none';
   outputCountBadge.innerText = '[ 待生成 ]';
   currentGeneratedImages = [];
   saveDraft();
@@ -259,7 +254,6 @@ function renderOutputCards(images) {
   emptyState.style.display = 'none';
 
   outputCountBadge.innerText = `[ 共 ${images.length} 页 ]`;
-  btnBatchSave.style.display = 'flex';
 
   images.forEach((item, idx) => {
     const card = document.createElement('div');
@@ -283,10 +277,7 @@ function renderOutputCards(images) {
   });
 }
 
-// 批量保存到相册
-btnBatchSave.addEventListener('click', () => {
-  batchSaveImagesToAlbum(currentGeneratedImages);
-});
+
 
 // 大图灯箱查看
 function openLightbox(src) {

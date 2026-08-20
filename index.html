@@ -16,25 +16,11 @@
   <div id="capture-zone"></div>
 
   <div id="app-container">
-    <!-- 顶部复古未来感 HUD 仪表盘头部 -->
-    <header class="hud-header">
-      <div class="brand-section">
-        <h1 class="brand-title">
-          <span>⚡ A4 物理排版</span>
-          <span class="brand-tag">V42 PRO</span>
-        </h1>
-        <p class="brand-sub">手写公式 · 60px 规整对齐 · 智能防截断分页</p>
-      </div>
-      <div class="hud-telemetry">
-        <div class="theme-segmented-control" id="theme-segmented-control">
-          <button type="button" class="theme-seg-btn" data-theme-val="auto" title="跟随系统">🌓 自动</button>
-          <button type="button" class="theme-seg-btn" data-theme-val="light" title="清爽绿意日间模式">☀️ 白天</button>
-          <button type="button" class="theme-seg-btn" data-theme-val="dark" title="复古未来黑夜模式">🌙 黑夜</button>
-        </div>
-        <div class="telemetry-badge">
-          <span class="status-dot"></span>
-          <span>ONLINE</span>
-        </div>
+    <header class="hud-header" style="justify-content: center; padding: 10px;">
+      <div class="theme-segmented-control" id="theme-segmented-control">
+        <button type="button" class="theme-seg-btn" data-theme-val="auto" title="跟随系统">🌓 自动</button>
+        <button type="button" class="theme-seg-btn" data-theme-val="light" title="清爽绿意日间模式">☀️ 白天</button>
+        <button type="button" class="theme-seg-btn" data-theme-val="dark" title="复古未来黑夜模式">🌙 黑夜</button>
       </div>
     </header>
 
@@ -104,11 +90,6 @@
           <div class="output-header-title">
             <span>📊 // RENDER OUTPUT</span>
             <span id="output-count-badge" style="font-size: 11px; color: var(--amber-gold);">[ 待生成 ]</span>
-          </div>
-          <div>
-            <button type="button" class="batch-save-btn" id="btn-batch-save" style="display: none;">
-              <span>💾 一键保存到相册</span>
-            </button>
           </div>
         </div>
 

@@ -1022,7 +1022,10 @@ span.f1 {
 
 .highlight,
 #capture-zone .highlight,
+#capture-zone .highlight *,
 .page-container .highlight,
-.sliced-content .highlight {
+.page-container .highlight *,
+.sliced-content .highlight,
+.sliced-content .highlight * {
   color: #d32f2f !important;
 }

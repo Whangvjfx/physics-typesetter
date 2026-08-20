@@ -1,8 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
-import { Share } from '@capacitor/share';
 import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Toast } from '@capacitor/toast';
 import { Media } from '@capacitor-community/media';
 
 export const isNativePlatform = () => Capacitor.isNativePlatform();
@@ -36,19 +34,7 @@ export async function triggerHaptic(type = 'light') {
  * 显示提示信息 (HUD Toast)
  * @param {string} text
  */
-export async function showToast(text) {
-  try {
-    if (Capacitor.isPluginAvailable('Toast')) {
-      await Toast.show({ text, duration: 'short', position: 'bottom' });
-    } else {
-      showWebToast(text);
-    }
-  } catch (e) {
-    showWebToast(text);
-  }
-}
-
-function showWebToast(text) {
+export function showToast(text) {
   const existing = document.getElementById('web-toast');
   if (existing) existing.remove();
 
@@ -80,7 +66,6 @@ export async function saveImageToAlbum(dataUrl, filename = 'physics_typeset.jpg'
   // 1. 原生 iOS App 环境：使用 Media 插件直接写入系统相册 (Camera Roll)
   if (Capacitor.isNativePlatform()) {
     try {
-      // 写入应用临时缓存
       const base64Data = dataUrl.split(',')[1];
       const savedFile = await Filesystem.writeFile({
         path: filename,
@@ -88,16 +73,14 @@ export async function saveImageToAlbum(dataUrl, filename = 'physics_typeset.jpg'
         directory: Directory.Cache
       });
 
-      // 调用相册 API 存入相册
       await Media.savePhoto({
         path: savedFile.uri
       });
 
       return true;
     } catch (e) {
-      console.warn('Media.savePhoto failed, trying fallback:', e);
+      console.warn('Media.savePhoto failed, trying direct dataUrl fallback:', e);
       try {
-        // 尝试直接传 dataUrl
         await Media.savePhoto({ path: dataUrl });
         return true;
       } catch (err) {
@@ -106,7 +89,7 @@ export async function saveImageToAlbum(dataUrl, filename = 'physics_typeset.jpg'
     }
   }
 
-  // 2. Web / PWA 环境：尝试使用 Web Share API 唤起 iOS 系统保存面板
+  // 2. Web / PWA 环境：使用 Web Share API 唤起 iOS 系统保存面板
   if (navigator.canShare) {
     try {
       const response = await fetch(dataUrl);
@@ -167,39 +150,35 @@ export async function batchSaveImagesToAlbum(images) {
 }
 
 /**
- * 原生分享所有图片 (AirDrop / 微信 / 存储到文件)
+ * 分享所有图片 (原生分享面板)
  * @param {Array<{dataUrl: string, pageIndex: number}>} images
  */
 export async function shareAllImages(images) {
   if (!images || images.length === 0) return;
   triggerHaptic('light');
 
-  if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Share')) {
+  if (navigator.canShare) {
     try {
-      const savedUris = [];
+      const files = [];
       for (const item of images) {
-        const base64Data = item.dataUrl.split(',')[1];
-        const res = await Filesystem.writeFile({
-          path: `share_p${item.pageIndex}.jpg`,
-          data: base64Data,
-          directory: Directory.Cache
-        });
-        savedUris.push(res.uri);
+        const response = await fetch(item.dataUrl);
+        const blob = await response.blob();
+        files.push(new File([blob], `physics_page_${item.pageIndex}.jpg`, { type: 'image/jpeg' }));
       }
-
-      await Share.share({
-        title: 'A4 物理排版图片',
-        text: `共 ${images.length} 页高清解答`,
-        files: savedUris,
-        dialogTitle: '分享或存储排版图片'
-      });
-      return;
+      if (navigator.canShare({ files })) {
+        await navigator.share({
+          files,
+          title: 'A4 物理排版图片',
+          text: `共 ${images.length} 页解答`
+        });
+        return;
+      }
     } catch (e) {
-      console.warn('Native share failed:', e);
+      console.warn('Web Share failed:', e);
     }
   }
 
-  // Web 端调用相册保存
+  // 兜底批量保存
   await batchSaveImagesToAlbum(images);
 }
 

@@ -12,13 +12,13 @@ public class PhotoSaverPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc public func savePhoto(_ call: CAPPluginCall) {
         guard let dataString = call.options["data"] as? String else {
-            call.reject("Must provide image data")
+            call.resolve(["error": "Must provide image data"])
             return
         }
 
         let cleanBase64 = dataString.contains(",") ? String(dataString.split(separator: ",")[1]) : dataString
         guard let imageData = Data(base64Encoded: cleanBase64), let image = UIImage(data: imageData) else {
-            call.reject("Invalid image data")
+            call.resolve(["error": "Invalid image data"])
             return
         }
 
@@ -40,7 +40,7 @@ public class PhotoSaverPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.resolve(["success": true])
             }
         } else {
-            call.reject("请在 iPhone「设置」中开启本应用的「照片写入」权限")
+            call.resolve(["error": "请在 iPhone「设置」中开启本应用的「照片写入」权限"])
         }
     }
 

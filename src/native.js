@@ -69,6 +69,8 @@ export async function saveImageToAlbum(dataUrl, filename = 'physics_typeset.jpg'
       const res = await PhotoSaver.savePhoto({ data: dataUrl });
       if (res && res.success) {
         return true;
+      } else if (res && res.error) {
+        throw new Error(res.error);
       }
     } catch (e) {
       console.warn('Native PhotoSaver failed:', e);

@@ -1,4 +1,4 @@
-name: Build iOS IPA & Deploy Web
+name: Build iOS IPA
 
 on:
   push:
@@ -9,11 +9,9 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
-  build-and-deploy:
+  build-ipa:
     runs-on: macos-14
     steps:
       - name: Checkout Code
@@ -47,7 +45,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE="" \
-            clean build
+            build
 
       - name: Package Payload to IPA
         run: |
@@ -62,15 +60,3 @@ jobs:
           name: PhysicsTypesetter-iOS-IPA
           path: PhysicsTypesetter.ipa
           retention-days: 30
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './dist'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4

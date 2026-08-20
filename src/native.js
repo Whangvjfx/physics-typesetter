@@ -1,7 +1,5 @@
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Media } from '@capacitor-community/media';
 
 export const isNativePlatform = () => Capacitor.isNativePlatform();
 
@@ -63,29 +61,13 @@ export function showToast(text) {
 export async function saveImageToAlbum(dataUrl, filename = 'physics_typeset.jpg') {
   triggerHaptic('light');
 
-  // 1. 原生 iOS App 环境：使用 Media 插件直接写入系统相册 (Camera Roll)
-  if (Capacitor.isNativePlatform()) {
+  // 1. 原生 iOS App 环境：调用纯原生零依赖的 PhotoSaver 插件
+  if (Capacitor.isNativePlatform() && Capacitor.Plugins.PhotoSaver) {
     try {
-      const base64Data = dataUrl.split(',')[1];
-      const savedFile = await Filesystem.writeFile({
-        path: filename,
-        data: base64Data,
-        directory: Directory.Cache
-      });
-
-      await Media.savePhoto({
-        path: savedFile.uri
-      });
-
+      await Capacitor.Plugins.PhotoSaver.savePhoto({ data: dataUrl });
       return true;
     } catch (e) {
-      console.warn('Media.savePhoto failed, trying direct dataUrl fallback:', e);
-      try {
-        await Media.savePhoto({ path: dataUrl });
-        return true;
-      } catch (err) {
-        console.error('All native photo save attempts failed:', err);
-      }
+      console.warn('Native PhotoSaver failed:', e);
     }
   }
 
@@ -138,7 +120,7 @@ export async function batchSaveImagesToAlbum(images) {
       const ok = await saveImageToAlbum(item.dataUrl, filename);
       if (ok) successCount++;
       if (i < images.length - 1) {
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 250));
       }
     } catch (err) {
       console.error(`Error saving page ${item.pageIndex}:`, err);

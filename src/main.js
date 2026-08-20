@@ -4,7 +4,6 @@ import {
   showToast,
   saveImageToAlbum,
   batchSaveImagesToAlbum,
-  shareAllImages,
   readClipboardText
 } from './native.js';
 
@@ -29,7 +28,6 @@ const outputContainer = document.getElementById('output-container');
 const emptyState = document.getElementById('empty-state');
 const outputCountBadge = document.getElementById('output-count-badge');
 const btnBatchSave = document.getElementById('btn-batch-save');
-const btnShareAll = document.getElementById('btn-share-all');
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightbox-img');
 const lightboxClose = document.getElementById('lightbox-close');
@@ -262,7 +260,6 @@ function renderOutputCards(images) {
 
   outputCountBadge.innerText = `[ 共 ${images.length} 页 ]`;
   btnBatchSave.style.display = 'flex';
-  btnShareAll.style.display = 'flex';
 
   images.forEach((item, idx) => {
     const card = document.createElement('div');
@@ -275,19 +272,12 @@ function renderOutputCards(images) {
       <img src="${item.dataUrl}" alt="Page ${item.pageIndex}" data-idx="${idx}">
       <div class="output-card-actions">
         <button type="button" class="card-action-btn btn-view-img" data-idx="${idx}">🔍 点击查看大图</button>
-        <button type="button" class="card-action-btn btn-save-single" data-idx="${idx}" style="background: rgba(16, 185, 129, 0.2); border-color: var(--neon-emerald); color: #34d399; font-weight: 700;">
-          💾 保存此页到相册
-        </button>
       </div>
     `;
 
-    // 绑定单张大图查看与保存
+    // 绑定单张大图查看
     card.querySelector('img').addEventListener('click', () => openLightbox(item.dataUrl));
     card.querySelector('.btn-view-img').addEventListener('click', () => openLightbox(item.dataUrl));
-    card.querySelector('.btn-save-single').addEventListener('click', async () => {
-      const ok = await saveImageToAlbum(item.dataUrl, `physics_page_${item.pageIndex}.jpg`);
-      if (ok) showToast(`已将第 ${item.pageIndex} 页保存至相册！`);
-    });
 
     outputContainer.appendChild(card);
   });
@@ -296,11 +286,6 @@ function renderOutputCards(images) {
 // 批量保存到相册
 btnBatchSave.addEventListener('click', () => {
   batchSaveImagesToAlbum(currentGeneratedImages);
-});
-
-// 分享所有图片
-btnShareAll.addEventListener('click', () => {
-  shareAllImages(currentGeneratedImages);
 });
 
 // 大图灯箱查看

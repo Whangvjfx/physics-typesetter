@@ -903,24 +903,30 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* 优先调用 Caveat 英文手写，没有的再 fallback 给中文手写体 */
 .page-container, .page-container *,
-#master-box, #master-box * {
+#master-box, #master-box *,
+#capture-zone, #capture-zone *,
+.sliced-content, .sliced-content * {
   font-family: 'Caveat', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+  color: #111111 !important;
 }
 
 span.f1 {
   font-family: 'Caveat', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+  color: #111111 !important;
 }
 
-/* KaTeX 专属覆盖：为公式注入纯正的手写灵魂 */
+/* KaTeX 专属覆盖：为公式注入纯正的手写灵魂与纯黑色彩 */
 .katex {
   font-family: 'Caveat', 'MyHandwriting', cursive !important;
   font-size: 1.25em !important;
+  color: #111111 !important;
 }
 
 /* 解除公式内部的 60px 限制，防止上下标被拉扯破碎 */
 .katex * {
   font-family: 'Caveat', 'MyHandwriting', 'KaTeX_Math', 'KaTeX_Main', cursive !important;
   line-height: normal !important;
+  color: #111111 !important;
 }
 
 /* 独立公式块 (block math) 的容器基础设定，稍后在 JS 中会被强行锁定为 60 的倍数高度 */
@@ -929,12 +935,14 @@ span.f1 {
   padding-left: 1em !important;
   margin: 0 !important;
   display: block;
+  color: #111111 !important;
 }
 
 .page-container {
   width: 800px;
   height: 1131px;
-  background-color: white;
+  background-color: #ffffff !important;
+  color: #111111 !important;
   padding: 40px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   margin-bottom: 20px;
@@ -953,11 +961,11 @@ span.f1 {
   position: absolute;
   top: -12px;
   left: 20px;
-  background: white;
+  background: #ffffff !important;
   padding: 0 10px;
   font-size: 18px !important;
   font-family: "SimHei", "黑体", sans-serif !important;
-  color: #333;
+  color: #333333 !important;
   font-weight: bold;
   line-height: 24px;
 }
@@ -973,7 +981,7 @@ span.f1 {
   border-bottom: 1px solid #aaa;
   line-height: 60px;
   font-size: 21px;
-  color: #111;
+  color: #111111 !important;
 }
 
 .ans-row:last-child {
@@ -1012,6 +1020,9 @@ span.f1 {
   padding: 0;
 }
 
-.highlight {
-  color: #d32f2f;
+.highlight,
+#capture-zone .highlight,
+.page-container .highlight,
+.sliced-content .highlight {
+  color: #d32f2f !important;
 }

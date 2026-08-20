@@ -1,5 +1,7 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
+
+const PhotoSaver = registerPlugin('PhotoSaver');
 
 export const isNativePlatform = () => Capacitor.isNativePlatform();
 
@@ -61,17 +63,22 @@ export function showToast(text) {
 export async function saveImageToAlbum(dataUrl, filename = 'physics_typeset.jpg') {
   triggerHaptic('light');
 
-  // 1. 原生 iOS App 环境：调用纯原生零依赖的 PhotoSaver 插件
-  if (Capacitor.isNativePlatform() && Capacitor.Plugins.PhotoSaver) {
+  // 1. 原生 iOS App 环境：调用原生 PhotoSaver 插件存入系统相册
+  if (Capacitor.isNativePlatform()) {
     try {
-      await Capacitor.Plugins.PhotoSaver.savePhoto({ data: dataUrl });
-      return true;
+      const res = await PhotoSaver.savePhoto({ data: dataUrl });
+      if (res && res.success) {
+        return true;
+      }
     } catch (e) {
       console.warn('Native PhotoSaver failed:', e);
+      const msg = e.message || e || '保存失败';
+      alert('⚠️ 保存相册提示：' + msg);
+      return false;
     }
   }
 
-  // 2. Web / PWA 环境：使用 Web Share API 唤起 iOS 系统保存面板
+  // 2. Web / PWA 环境：调用 Web Share API 唤起保存面板
   if (navigator.canShare) {
     try {
       const response = await fetch(dataUrl);
@@ -120,7 +127,7 @@ export async function batchSaveImagesToAlbum(images) {
       const ok = await saveImageToAlbum(item.dataUrl, filename);
       if (ok) successCount++;
       if (i < images.length - 1) {
-        await new Promise(r => setTimeout(r, 250));
+        await new Promise(r => setTimeout(r, 200));
       }
     } catch (err) {
       console.error(`Error saving page ${item.pageIndex}:`, err);
@@ -129,39 +136,6 @@ export async function batchSaveImagesToAlbum(images) {
 
   triggerHaptic('success');
   showToast(`🎉 成功保存 ${successCount} 页排版图片至相册！`);
-}
-
-/**
- * 分享所有图片 (原生分享面板)
- * @param {Array<{dataUrl: string, pageIndex: number}>} images
- */
-export async function shareAllImages(images) {
-  if (!images || images.length === 0) return;
-  triggerHaptic('light');
-
-  if (navigator.canShare) {
-    try {
-      const files = [];
-      for (const item of images) {
-        const response = await fetch(item.dataUrl);
-        const blob = await response.blob();
-        files.push(new File([blob], `physics_page_${item.pageIndex}.jpg`, { type: 'image/jpeg' }));
-      }
-      if (navigator.canShare({ files })) {
-        await navigator.share({
-          files,
-          title: 'A4 物理排版图片',
-          text: `共 ${images.length} 页解答`
-        });
-        return;
-      }
-    } catch (e) {
-      console.warn('Web Share failed:', e);
-    }
-  }
-
-  // 兜底批量保存
-  await batchSaveImagesToAlbum(images);
 }
 
 /**

@@ -1,0 +1,22 @@
+{
+  "name": "A4 物理排版 V42 Pro",
+  "short_name": "物理排版",
+  "description": "A4 纸面物理排版系统，支持手写字体、KaTeX 公式渲染、智能防截断分页与相册保存",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07090e",
+  "theme_color": "#07090e",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

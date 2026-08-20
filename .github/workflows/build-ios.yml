@@ -31,7 +31,7 @@ jobs:
       - name: Sync iOS Capacitor Project
         run: npx cap sync ios
 
-      - name: Build iOS App (Ad-Hoc Signed for AltStore / Sideloadly / TrollStore)
+      - name: Build iOS App (Unsigned for Sideloadly / 爱思助手 / AltStore)
         run: |
           cd ios/App
           xcodebuild -resolvePackageDependencies -project App.xcodeproj
@@ -41,13 +41,12 @@ jobs:
             -destination "generic/platform=iOS" \
             -sdk iphoneos \
             -derivedDataPath build \
-            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=YES \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM="" \
+            CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
+            DEVELOPMENT_TEAM="" \
             build
 
       - name: Package Payload to IPA

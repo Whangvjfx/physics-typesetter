@@ -10,15 +10,15 @@ public class PhotoSaverPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "savePhoto", returnType: CAPPluginReturnPromise)
     ]
 
-    @objc func savePhoto(_ call: CAPPluginCall) {
-        guard let dataString = call.getString("data") else {
-            call.reject("Must provide image data")
+    @objc public func savePhoto(_ call: CAPPluginCall) {
+        guard let dataString = call.options["data"] as? String else {
+            call.reject("Must provide image data", nil, nil, nil)
             return
         }
 
         let cleanBase64 = dataString.contains(",") ? String(dataString.split(separator: ",")[1]) : dataString
         guard let imageData = Data(base64Encoded: cleanBase64), let image = UIImage(data: imageData) else {
-            call.reject("Invalid image data")
+            call.reject("Invalid image data", nil, nil, nil)
             return
         }
 
@@ -40,7 +40,7 @@ public class PhotoSaverPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.resolve(["success": true])
             }
         } else {
-            call.reject("请在 iPhone「设置」中开启本应用的「照片写入」权限")
+            call.reject("请在 iPhone「设置」中开启本应用的「照片写入」权限", nil, nil, nil)
         }
     }
 
@@ -81,7 +81,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                      configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
         let config = UISceneConfiguration(name: "Default Configuration",
-                                          sessionRole: connectingSession.role)
+                                          sessionRole: connectingSceneSession.role)
         config.delegateClass = SceneDelegate.self
         return config
     }

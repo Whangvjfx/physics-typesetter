@@ -1,14 +1,15 @@
 {
   "name": "physics-typesetter",
   "version": "1.0.0",
-  "description": "A4 物理排版系统 - iOS App & PWA",
+  "description": "A4 物理排版系统 - iOS & Android App & PWA",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "cap:sync": "npm run build && npx cap sync ios",
-    "cap:open": "npx cap open ios"
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android"
   },
   "repository": {
     "type": "git",
@@ -25,6 +26,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capacitor/haptics": "^8.0.2",

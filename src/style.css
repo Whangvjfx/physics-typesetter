@@ -957,16 +957,20 @@ span.f1 {
   width: 100%;
 }
 
-.custom-legend {
+.custom-legend,
+#capture-zone .custom-legend,
+#capture-zone .custom-box .custom-legend,
+.page-container .custom-legend,
+.page-container .custom-box .custom-legend {
   position: absolute;
   top: -12px;
   left: 20px;
   background: #ffffff !important;
   padding: 0 10px;
   font-size: 18px !important;
-  font-family: "SimHei", "黑体", sans-serif !important;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Heiti SC", "Noto Sans CJK SC", "Source Han Sans CN", "Microsoft YaHei", "SimHei", "黑体", sans-serif !important;
   color: #333333 !important;
-  font-weight: bold;
+  font-weight: 800 !important;
   line-height: 24px;
 }
 

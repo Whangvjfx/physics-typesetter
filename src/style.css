@@ -986,6 +986,8 @@ span.f1 {
   line-height: 60px;
   font-size: 21px;
   color: #111111 !important;
+  display: flex;
+  align-items: center;
 }
 
 .ans-row:last-child {
@@ -1013,7 +1015,7 @@ span.f1 {
   height: 1020px;
 }
 
-/* 确保切割层级没有任何自带的 margin / padding 干扰 60px 网格 */
+/* 确保切割层级没有任何自带的 margin / padding 干扰 60px 网格，向上微调 7px 确保字符基线与横线完美贴合且不压线 */
 .sliced-content {
   width: 100%;
   font-size: 21px;
@@ -1022,6 +1024,8 @@ span.f1 {
   line-break: strict;
   margin: 0;
   padding: 0;
+  position: relative;
+  top: -7px;
 }
 
 .highlight,

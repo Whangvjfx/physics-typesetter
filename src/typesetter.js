@@ -81,9 +81,9 @@ export async function generateTypesetImages({
       } else {
         // 【完美对齐核心】: 使用 21px 的自身行高，绝对不撑破父级 60px 的网格！
         if (/[\u4e00-\u9fa5]/.test(char)) {
-          randomizedText += `<span class="f1" style="font-size: 1.5em; line-height: 21px !important;">${char}</span>`;
+          randomizedText += `<span class="f1" style="font-size: 1.5em; line-height: inherit !important;">${char}</span>`;
         } else {
-          randomizedText += `<span class="f1" style="font-size: 1.35em; line-height: 21px !important;">${char}</span>`;
+          randomizedText += `<span class="f1" style="font-size: 1.35em; line-height: inherit !important;">${char}</span>`;
         }
       }
     }

@@ -1003,7 +1003,7 @@ span.f1 {
   background-image: linear-gradient(to bottom, transparent 59px, #aaa 59px, #aaa 60px);
   background-size: 100% 60px;
   background-repeat: repeat-y;
-  background-position: 0 0;
+  background-position: 0 -11px;
   overflow: hidden;
 }
 
@@ -1015,7 +1015,7 @@ span.f1 {
   height: 1020px;
 }
 
-/* 确保切割层级没有任何自带的 margin / padding 干扰 60px 网格，向上微调 7px 确保字符基线与横线完美贴合且不压线 */
+/* 确保切割层级没有任何自带的 margin / padding 干扰 60px 网格 */
 .sliced-content {
   width: 100%;
   font-size: 21px;
@@ -1024,8 +1024,6 @@ span.f1 {
   line-break: strict;
   margin: 0;
   padding: 0;
-  position: relative;
-  top: -7px;
 }
 
 .highlight,

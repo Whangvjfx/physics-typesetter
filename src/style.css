@@ -1003,8 +1003,15 @@ span.f1 {
   background-image: linear-gradient(to bottom, transparent 59px, #aaa 59px, #aaa 60px);
   background-size: 100% 60px;
   background-repeat: repeat-y;
-  background-position: 0 -11px;
+  background-position: 0 -6px;
   overflow: hidden;
+}
+
+/* 针对 Android WebView 的基线偏移修复 */
+.android-fix span.f1,
+.android-fix .katex {
+  position: relative;
+  top: -10px;
 }
 
 .p1 {

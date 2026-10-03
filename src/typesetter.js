@@ -114,6 +114,11 @@ export async function generateTypesetImages({
 
   // 强制等待网络与本地字体加载完毕并留出绘制时间
   await document.fonts.ready;
+  let fontWaitCount = 0;
+  while (!document.fonts.check('21px MyHandwriting') && fontWaitCount < 10) {
+    await new Promise(r => setTimeout(r, 100));
+    fontWaitCount++;
+  }
   await new Promise(resolve => setTimeout(resolve, 200));
 
   masterBox.querySelectorAll('img').forEach(img => {
@@ -148,8 +153,19 @@ export async function generateTypesetImages({
     imagesPos.push({ top, bottom });
   });
 
-  const totalHeight = masterBox.offsetHeight;
-  if (totalHeight === 0) throw new Error('文本处理异常，未检测到有效内容高度。');
+  // 严密测算真实内容高度，包含所有子元素底部位置
+  let maxChildBottom = 0;
+  masterBox.querySelectorAll('*').forEach(el => {
+    const r = el.getBoundingClientRect();
+    const b = r.bottom - masterRect.top;
+    if (b > maxChildBottom) maxChildBottom = b;
+  });
+
+  const measuredHeight = Math.max(masterBox.offsetHeight, masterBox.scrollHeight, maxChildBottom);
+  if (measuredHeight === 0) throw new Error('文本处理异常，未检测到有效内容高度。');
+
+  // 向上取整到整行 60px 网格高度，确保绝不截断最后一行
+  const totalHeight = Math.ceil(measuredHeight / 60) * 60;
 
   onProgress({ stage: 'slicing', message: '正在执行智能防截断分页...' });
 
@@ -201,16 +217,28 @@ export async function generateTypesetImages({
     const start = pageStarts[i];
     const end = pageStarts[i + 1];
     const contentDisplayHeight = end - start;
+    const isLastPage = (i === pageStarts.length - 2);
 
     let pageDiv = document.createElement('div');
     pageDiv.className = 'page-container';
 
     let contentWrapper = document.createElement('div');
-    contentWrapper.style.height = contentDisplayHeight + 'px';
-    contentWrapper.style.overflow = 'hidden';
+    if (isLastPage) {
+      // 最后一页：无需使用紧凑像素截断，直接给足当前页的最大容纳高度
+      // 外层容器 (.p1 或 .p2) 自身已有严格的 780px / 1020px 纸张边界与 overflow:hidden
+      // 这样确保末尾内容或最后几行绝对不会被 contentWrapper 提前截断
+      const maxPageH = pageHeights[i] || 1020;
+      contentWrapper.style.height = maxPageH + 'px';
+    } else {
+      contentWrapper.style.height = contentDisplayHeight + 'px';
+      contentWrapper.style.overflow = 'hidden';
+    }
 
     let contentClone = document.createElement('div');
     contentClone.className = 'sliced-content';
+    if (masterBox.classList.contains('android-fix')) {
+      contentClone.classList.add('android-fix');
+    }
     contentClone.style.marginTop = `-${start}px`;
     contentClone.innerHTML = masterBox.innerHTML;
 

@@ -881,8 +881,10 @@ input[type="range"]::-webkit-slider-thumb {
   text-align: left;
   line-break: strict;
   overflow-wrap: break-word;
+  word-break: break-all;
   color: #111;
-  padding-bottom: 20px;
+  padding: 0;
+  margin: 0;
 }
 
 #master-box img {
@@ -1026,9 +1028,11 @@ span.f1 {
 .sliced-content {
   width: 100%;
   font-size: 21px;
-  line-height: 60px;
+  line-height: 60px !important;
   text-align: left;
   line-break: strict;
+  overflow-wrap: break-word;
+  word-break: break-all;
   margin: 0;
   padding: 0;
 }

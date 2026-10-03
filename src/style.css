@@ -96,6 +96,8 @@ html, body {
   color: var(--text-primary);
   font-family: var(--font-sans);
   overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -1009,11 +1011,12 @@ span.f1 {
   overflow: hidden;
 }
 
-/* 针对 Android WebView 的基线偏移修复 */
-.android-fix span.f1,
-.android-fix .katex {
+/* 行内公式零高度包裹层：底边坐在文字基线上，对 60px 行框高度贡献恒为 0 */
+.kx-wrap {
+  display: inline-block;
   position: relative;
-  top: -10px;
+  height: 0;
+  vertical-align: baseline;
 }
 
 .p1 {

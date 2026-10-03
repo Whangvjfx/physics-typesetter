@@ -3,6 +3,113 @@ import katex from 'katex';
 import renderMathInElement from 'katex/contrib/auto-render';
 
 /**
+ * 计算 KaTeX 公式真实的可视包围盒（所有 .base 片段的并集）
+ */
+function mathBox(el) {
+  const parts = el.querySelectorAll('.katex-html > .base, .katex-html > .tag');
+  if (!parts.length) return null;
+  let top = Infinity, left = Infinity, right = -Infinity, bottom = -Infinity;
+  parts.forEach(p => {
+    const r = p.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return;
+    top = Math.min(top, r.top);
+    left = Math.min(left, r.left);
+    right = Math.max(right, r.right);
+    bottom = Math.max(bottom, r.bottom);
+  });
+  if (top === Infinity) return null;
+  return { top, left, right, bottom };
+}
+
+/**
+ * 【第二道保险】检测 WebView 文字缩放（系统“字体大小”设置）。
+ * 文字缩放会同时放大字号和固定 px 行高，但不放大横线背景与分页高度。
+ * 若检测到缩放（原生层锁定失效的极端机型），则按 1/z 反向补偿，保证 60px 网格。
+ */
+function compensateTextZoom() {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;left:-9999px;top:0;font-size:20px;line-height:100px;padding:0;margin:0;';
+  probe.textContent = 'x';
+  document.body.appendChild(probe);
+  const z = probe.offsetHeight / 100;
+  probe.remove();
+
+  let styleEl = document.getElementById('text-zoom-compensate');
+  if (!z || Math.abs(z - 1) < 0.01) {
+    if (styleEl) styleEl.remove();
+    return;
+  }
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'text-zoom-compensate';
+    document.head.appendChild(styleEl);
+  }
+  const px = v => (v / z).toFixed(3) + 'px';
+  styleEl.textContent = `
+    #master-box, .sliced-content { font-size: ${px(21)} !important; line-height: ${px(60)} !important; }
+    .ans-row { font-size: ${px(21)} !important; line-height: ${px(60)} !important; }
+    .custom-legend, #capture-zone .custom-legend, .page-container .custom-legend { font-size: ${px(18)} !important; line-height: ${px(24)} !important; }
+  `;
+}
+
+/**
+ * 【跨平台 60px 行高锁定核心】行内公式“零高度化”
+ *
+ * 风险：较高的行内公式（分式、上下标、嵌套分式）若超出 60px 行框，
+ * 会把所在行撑高，后面每一行都随之下沉，横线错位、分页时把一行字拦腰截断。
+ *
+ * 方案：先在原位测出公式相对文字基线的精确位置，然后把公式放进一个
+ * “高度为 0、底边坐在基线上”的行内盒子里，公式本体绝对定位回原位置。
+ * 这样公式视觉位置分毫不变，但对行框高度的贡献恒为 0，
+ * 每一行都严格等于 60px，与平台/字体度量无关。
+ */
+function neutralizeInlineMath(root) {
+  const items = Array.from(root.querySelectorAll('.katex')).filter(el => !el.closest('.katex-display'));
+  if (!items.length) return;
+
+  // 阶段 0：禁止公式内部折行，并在公式开头插入零尺寸基线探针
+  const recs = items.map(el => {
+    el.style.whiteSpace = 'nowrap';
+    const mark = document.createElement('span');
+    mark.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline;';
+    el.insertBefore(mark, el.firstChild);
+    return { el, mark };
+  });
+
+  // 阶段 1：测量公式相对基线的偏移与宽度
+  recs.forEach(r => {
+    const baseline = r.mark.getBoundingClientRect().top;
+    const elRect = r.el.getBoundingClientRect();
+    const box = mathBox(r.el) || elRect;
+    r.top0 = box.top - baseline;
+    r.lx = box.left - elRect.left;
+    r.width = Math.max(box.right, elRect.right) - elRect.left;
+  });
+
+  // 阶段 2：移除探针，装入零高度包裹层
+  recs.forEach(r => {
+    r.mark.remove();
+    const wrap = document.createElement('span');
+    wrap.className = 'kx-wrap';
+    wrap.style.width = (Math.ceil(r.width * 100) / 100) + 'px';
+    r.el.parentNode.insertBefore(wrap, r.el);
+    wrap.appendChild(r.el);
+    r.el.style.position = 'absolute';
+    r.el.style.left = '0px';
+    r.el.style.top = '0px';
+    r.wrap = wrap;
+  });
+
+  // 阶段 3：校正绝对定位，使公式回到与原基线完全一致的位置
+  recs.forEach(r => {
+    const wr = r.wrap.getBoundingClientRect(); // 高度为 0：top == bottom == 基线
+    const nb = mathBox(r.el) || r.el.getBoundingClientRect();
+    r.el.style.left = (r.lx - (nb.left - wr.left)) + 'px';
+    r.el.style.top = (r.top0 - (nb.top - wr.top)) + 'px';
+  });
+}
+
+/**
  * 核心排版引擎 (Strictly preserved V42 typesetting logic)
  * @param {Object} options
  * @param {string} options.rawText 待排版的原始解析文本
@@ -10,6 +117,7 @@ import renderMathInElement from 'katex/contrib/auto-render';
  * @param {number} options.imageWidth 配图宽度 (px)
  * @param {HTMLElement} options.captureZone 用于离线渲染 DOM 的容器
  * @param {Function} [options.onProgress] 进度回调函数
+ * @param {Function} [options.onLayout] 排版完成后的调试回调 (masterBox)
  * @returns {Promise<Array<{dataUrl: string, blob: Blob, pageIndex: number}>>} 生成的图片数组
  */
 export async function generateTypesetImages({
@@ -17,7 +125,8 @@ export async function generateTypesetImages({
   pastedImageSrc = null,
   imageWidth = 250,
   captureZone,
-  onProgress = () => {}
+  onProgress = () => {},
+  onLayout = null
 }) {
   let text = (rawText || '').trim();
   if (!text && !pastedImageSrc) {
@@ -36,13 +145,10 @@ export async function generateTypesetImages({
     document.body.appendChild(captureZone);
   }
   captureZone.innerHTML = '';
+  compensateTextZoom();
 
   const masterBox = document.createElement('div');
   masterBox.id = 'master-box';
-
-  if (/android/i.test(navigator.userAgent)) {
-    masterBox.classList.add('android-fix');
-  }
 
   let parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]*?\$)/g);
   for (let i = 0; i < parts.length; i++) {
@@ -127,6 +233,9 @@ export async function generateTypesetImages({
     }
   });
 
+  // ========== 【跨平台行高锁定核心】：行内公式零高度化，杜绝行框被撑高 ==========
+  neutralizeInlineMath(masterBox);
+
   // ========== 【完美对齐核心】：公式高度强制锁定为 60 的倍数 ==========
   masterBox.querySelectorAll('.katex-display').forEach(el => {
     const h = el.offsetHeight;
@@ -166,6 +275,8 @@ export async function generateTypesetImages({
 
   // 向上取整到整行 60px 网格高度，确保绝不截断最后一行
   const totalHeight = Math.ceil(measuredHeight / 60) * 60;
+
+  if (onLayout) onLayout(masterBox);
 
   onProgress({ stage: 'slicing', message: '正在执行智能防截断分页...' });
 
@@ -236,9 +347,6 @@ export async function generateTypesetImages({
 
     let contentClone = document.createElement('div');
     contentClone.className = 'sliced-content';
-    if (masterBox.classList.contains('android-fix')) {
-      contentClone.classList.add('android-fix');
-    }
     contentClone.style.marginTop = `-${start}px`;
     contentClone.innerHTML = masterBox.innerHTML;
 

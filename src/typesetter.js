@@ -22,46 +22,7 @@ function mathBox(el) {
 }
 
 /**
- * 【第二道保险】检测 WebView 文字缩放（系统“字体大小”设置）。
- * 文字缩放会同时放大字号和固定 px 行高，但不放大横线背景与分页高度。
- * 若检测到缩放（原生层锁定失效的极端机型），则按 1/z 反向补偿，保证 60px 网格。
- */
-function compensateTextZoom() {
-  const probe = document.createElement('div');
-  probe.style.cssText = 'position:absolute;left:-9999px;top:0;font-size:20px;line-height:100px;padding:0;margin:0;';
-  probe.textContent = 'x';
-  document.body.appendChild(probe);
-  const z = probe.offsetHeight / 100;
-  probe.remove();
-
-  let styleEl = document.getElementById('text-zoom-compensate');
-  if (!z || Math.abs(z - 1) < 0.01) {
-    if (styleEl) styleEl.remove();
-    return;
-  }
-  if (!styleEl) {
-    styleEl = document.createElement('style');
-    styleEl.id = 'text-zoom-compensate';
-    document.head.appendChild(styleEl);
-  }
-  const px = v => (v / z).toFixed(3) + 'px';
-  styleEl.textContent = `
-    #master-box, .sliced-content { font-size: ${px(21)} !important; line-height: ${px(60)} !important; }
-    .ans-row { font-size: ${px(21)} !important; line-height: ${px(60)} !important; }
-    .custom-legend, #capture-zone .custom-legend, .page-container .custom-legend { font-size: ${px(18)} !important; line-height: ${px(24)} !important; }
-  `;
-}
-
-/**
  * 【跨平台 60px 行高锁定核心】行内公式“零高度化”
- *
- * 风险：较高的行内公式（分式、上下标、嵌套分式）若超出 60px 行框，
- * 会把所在行撑高，后面每一行都随之下沉，横线错位、分页时把一行字拦腰截断。
- *
- * 方案：先在原位测出公式相对文字基线的精确位置，然后把公式放进一个
- * “高度为 0、底边坐在基线上”的行内盒子里，公式本体绝对定位回原位置。
- * 这样公式视觉位置分毫不变，但对行框高度的贡献恒为 0，
- * 每一行都严格等于 60px，与平台/字体度量无关。
  */
 function neutralizeInlineMath(root) {
   const items = Array.from(root.querySelectorAll('.katex')).filter(el => !el.closest('.katex-display'));
@@ -102,7 +63,7 @@ function neutralizeInlineMath(root) {
 
   // 阶段 3：校正绝对定位，使公式回到与原基线完全一致的位置
   recs.forEach(r => {
-    const wr = r.wrap.getBoundingClientRect(); // 高度为 0：top == bottom == 基线
+    const wr = r.wrap.getBoundingClientRect();
     const nb = mathBox(r.el) || r.el.getBoundingClientRect();
     r.el.style.left = (r.lx - (nb.left - wr.left)) + 'px';
     r.el.style.top = (r.top0 - (nb.top - wr.top)) + 'px';
@@ -110,15 +71,127 @@ function neutralizeInlineMath(root) {
 }
 
 /**
- * 核心排版引擎 (Strictly preserved V42 typesetting logic)
- * @param {Object} options
- * @param {string} options.rawText 待排版的原始解析文本
- * @param {string|null} options.pastedImageSrc 配图 Base64 或 URL
- * @param {number} options.imageWidth 配图宽度 (px)
- * @param {HTMLElement} options.captureZone 用于离线渲染 DOM 的容器
- * @param {Function} [options.onProgress] 进度回调函数
- * @param {Function} [options.onLayout] 排版完成后的调试回调 (masterBox)
- * @returns {Promise<Array<{dataUrl: string, blob: Blob, pageIndex: number}>>} 生成的图片数组
+ * 【第二道保险】检测 WebView 文字缩放
+ */
+function compensateTextZoom() {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;left:-9999px;top:0;font-size:20px;line-height:100px;padding:0;margin:0;';
+  probe.textContent = 'x';
+  document.body.appendChild(probe);
+  const z = probe.offsetHeight / 100;
+  probe.remove();
+
+  let styleEl = document.getElementById('text-zoom-compensate');
+  if (!z || Math.abs(z - 1) < 0.01) {
+    if (styleEl) styleEl.remove();
+    return;
+  }
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'text-zoom-compensate';
+    document.head.appendChild(styleEl);
+  }
+  const px = v => (v / z).toFixed(3) + 'px';
+  styleEl.textContent = `
+    #master-box, .sliced-content { font-size: ${px(21)} !important; line-height: ${px(60)} !important; }
+    .ans-row { font-size: ${px(21)} !important; line-height: ${px(60)} !important; }
+    .custom-legend, #capture-zone .custom-legend, .page-container .custom-legend { font-size: ${px(18)} !important; line-height: ${px(24)} !important; }
+  `;
+}
+
+/**
+ * 汉字专属：拟真手写有机扰动引擎 (Organic Chinese Handwriting Engine)
+ * 仅对汉字生效，公式、英文字母、数字和标点完全保持原样不变。
+ * 
+ * 包含六大核心特性：
+ * 1. 同字同形异构化 (解重复字千篇一律问题)
+ * 2. 基线自然浮动 (Baseline vertical jitter)
+ * 3. 微小倾斜角度 (Micro-rotation)
+ * 4. 大小微小差异 (Size micro-variation)
+ * 5. 字距松紧微调 (Kerning/tracking jitter)
+ * 6. 纸张纤维微洇笔墨 (Micro ink-bleed diffusion)
+ */
+function createOrganicChineseCharGenerator() {
+  const charOccurMap = new Map();
+  let chineseCharSeq = 0;
+
+  return function formatChineseChar(char) {
+    const count = charOccurMap.get(char) || 0;
+    charOccurMap.set(char, count + 1);
+    const seq = chineseCharSeq++;
+
+    // 伪随机哈希，基于字符、字序与重复次数
+    const charCode = char.charCodeAt(0);
+    const hash = (charCode * 37 + seq * 19 + count * 67) % 1000;
+    const r1 = (hash / 1000);
+    const r2 = ((hash * 47) % 1000) / 1000;
+    const r3 = ((hash * 89) % 1000) / 1000;
+
+    // --- 1. 同字同形异构化 (Homoglyph Differentiation) ---
+    // 重复汉字轮换 4 种不同的形态特征（正势、舒展扁势、挺拔纵势、轻快侧势）
+    const profile = count % 4;
+    let baseScaleX = 1.0;
+    let baseScaleY = 1.0;
+    let baseSkewX = 0;
+    let baseTilt = 0;
+    let strokeExtra = '';
+    let opacity = 0.98;
+
+    if (profile === 0) {
+      baseScaleX = 1.0;
+      baseScaleY = 1.0;
+      baseSkewX = 0.3;
+      baseTilt = 0.4;
+      opacity = 0.98;
+    } else if (profile === 1) {
+      baseScaleX = 1.045;
+      baseScaleY = 0.96;
+      baseSkewX = -1.5;
+      baseTilt = -1.2;
+      strokeExtra = '-webkit-text-stroke: 0.28px currentColor;';
+      opacity = 1.0;
+    } else if (profile === 2) {
+      baseScaleX = 0.955;
+      baseScaleY = 1.04;
+      baseSkewX = 1.6;
+      baseTilt = 1.4;
+      opacity = 0.94;
+    } else {
+      baseScaleX = 0.98;
+      baseScaleY = 0.98;
+      baseSkewX = -2.2;
+      baseTilt = 2.1;
+      strokeExtra = '-webkit-text-stroke: 0.16px currentColor;';
+      opacity = 0.96;
+    }
+
+    // --- 2. 基线自然轻微浮动 (Baseline Jitter) ---
+    // 自然行进起伏 + 字符级微颤，范围控制在 ±1.5px
+    const naturalWave = Math.sin(seq * 0.58) * 0.7;
+    const microJitter = (r1 - 0.5) * 1.6;
+    const deltaY = (naturalWave + microJitter).toFixed(2);
+
+    // --- 3. 微小倾斜角度 (Micro-rotation) ---
+    const tiltNoise = (r2 - 0.5) * 2.2;
+    const finalTilt = (baseTilt + tiltNoise).toFixed(2);
+
+    // --- 4. 大小微小差异 (Size Jitter) ---
+    const scaleFactor = 1.0 + (r3 - 0.5) * 0.06;
+    const finalScaleX = (baseScaleX * scaleFactor).toFixed(3);
+    const finalScaleY = (baseScaleY * scaleFactor).toFixed(3);
+
+    // --- 5. 字距松紧微调 (Kerning Jitter) ---
+    const marginR = ((r1 - 0.4) * 1.6).toFixed(2);
+    const marginL = ((r2 - 0.5) * 0.7).toFixed(2);
+
+    const transform = `transform: translateY(${deltaY}px) rotate(${finalTilt}deg) scale(${finalScaleX}, ${finalScaleY}) skewX(${baseSkewX}deg);`;
+
+    return `<span class="f1 organic-char" style="display:inline-block; vertical-align:baseline; font-size:1.5em; line-height:21px !important; margin-right:${marginR}px; margin-left:${marginL}px; opacity:${opacity}; ${strokeExtra} ${transform}">${char}</span>`;
+  };
+}
+
+/**
+ * 核心排版引擎 (V2 拟真手写版 - Organic Typesetting Engine)
  */
 export async function generateTypesetImages({
   rawText,
@@ -133,10 +206,10 @@ export async function generateTypesetImages({
     throw new Error('请先粘贴解析文本或上传图片！');
   }
 
-  // ====== 核心功能点：在解析开始前，将所有的数字 1 替换为小写字母 l ======
+  // 核心功能点：在解析开始前，将所有的数字 1 替换为小写字母 l
   text = text.replace(/1/g, 'l');
 
-  onProgress({ stage: 'preprocessing', message: '正在进行文本预处理与分词...' });
+  onProgress({ stage: 'preprocessing', message: '正在进行文本预处理与拟真分词...' });
   await new Promise(r => setTimeout(r, 60));
 
   if (!captureZone) {
@@ -175,7 +248,8 @@ export async function generateTypesetImages({
     .replace(/(<br>)+/g, '<br>')
     .replace(/^<br>|<br>$/g, '');
 
-  // ========== 逐字打散并应用单字体，严格加锁 line-height: 21px ==========
+  // ========== 汉字专属拟真有机打散引擎 ==========
+  const organicCharFormatter = createOrganicChineseCharGenerator();
   const tokenRegex = /(<[^>]+>)|(\$\$[\s\S]*?\$\$|\$[^$]*?\$)|([\s\S])/g;
   let randomizedText = '';
   let match;
@@ -183,16 +257,17 @@ export async function generateTypesetImages({
     if (match[1]) {
       randomizedText += match[1];
     } else if (match[2]) {
-      randomizedText += match[2]; // 公式区域原样放行，交由后续 KaTeX 渲染
+      randomizedText += match[2]; // 公式区域原样放行，交由后续 KaTeX 渲染（完全保持原样）
     } else if (match[3]) {
       let char = match[3];
       if (char.trim() === '' || char === '\n') {
         randomizedText += char;
       } else {
-        // 【完美对齐核心】: 使用 21px 的自身行高，绝对不撑破父级 60px 的网格！
         if (/[\u4e00-\u9fa5]/.test(char)) {
-          randomizedText += `<span class="f1" style="font-size: 1.5em; line-height: 21px !important;">${char}</span>`;
+          // 【核心】：仅汉字应用拟真手写扰动（基线浮动、倾斜、大小微差、字距松紧、同字异构、微洇）
+          randomizedText += organicCharFormatter(char);
         } else {
+          // 【核心】：非汉字（英文字母、数字、西文标点）严格沿用原方法不变！
           randomizedText += `<span class="f1" style="font-size: 1.35em; line-height: 21px !important;">${char}</span>`;
         }
       }
@@ -335,9 +410,6 @@ export async function generateTypesetImages({
 
     let contentWrapper = document.createElement('div');
     if (isLastPage) {
-      // 最后一页：无需使用紧凑像素截断，直接给足当前页的最大容纳高度
-      // 外层容器 (.p1 或 .p2) 自身已有严格的 780px / 1020px 纸张边界与 overflow:hidden
-      // 这样确保末尾内容或最后几行绝对不会被 contentWrapper 提前截断
       const maxPageH = pageHeights[i] || 1020;
       contentWrapper.style.height = maxPageH + 'px';
     } else {
@@ -375,29 +447,29 @@ export async function generateTypesetImages({
       `;
       pageDiv.querySelector('.p2').appendChild(contentWrapper);
     }
+
     captureZone.appendChild(pageDiv);
     pages.push(pageDiv);
   }
 
-  await new Promise(r => setTimeout(r, 200));
-
+  // ========== 使用 html2canvas 输出 A4 高清位图 ==========
   const results = [];
   for (let i = 0; i < pages.length; i++) {
     onProgress({
       stage: 'rendering',
-      message: `正在生成 A4 视网膜高清图片 (第 ${i + 1} / ${pages.length} 页)...`,
+      message: `正在生成拟真手写 A4 视网膜图片 (第 ${i + 1} / ${pages.length} 页)...`,
       current: i + 1,
       total: pages.length
     });
 
     const canvas = await html2canvas(pages[i], {
       scale: 2,
-      backgroundColor: '#ffffff',
+      backgroundColor: '#fbf9f4',
       useCORS: true,
       logging: false
     });
 
-    const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.98);
     results.push({
       dataUrl,
       pageIndex: i + 1,
@@ -406,6 +478,9 @@ export async function generateTypesetImages({
     });
   }
 
+  // 释放离线 DOM 内存
   captureZone.innerHTML = '';
+
+  onProgress({ stage: 'completed', message: '拟真手写排版全部完成！' });
   return results;
 }

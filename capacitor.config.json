@@ -1,5 +1,5 @@
 {
-  "appId": "com.whangvjfx.physicstypesetter",
-  "appName": "PhysicsTypesetter",
+  "appId": "com.whangvjfx.physicstypesetter.v2",
+  "appName": "物理排版-真手写",
   "webDir": "dist"
 }

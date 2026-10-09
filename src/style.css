@@ -945,7 +945,7 @@ span.f1 {
 .page-container {
   width: 800px;
   height: 1131px;
-  background-color: #ffffff !important;
+  background-color: #fbf9f4 !important;
   color: #111111 !important;
   padding: 40px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -954,7 +954,7 @@ span.f1 {
 
 .custom-box {
   position: relative;
-  border: 1px solid #666;
+  border: 1px solid #7a869a;
   border-radius: 12px;
   margin-top: 15px;
   margin-bottom: 20px;
@@ -969,7 +969,7 @@ span.f1 {
   position: absolute;
   top: -12px;
   left: 20px;
-  background: #ffffff !important;
+  background: #fbf9f4 !important;
   padding: 0 10px;
   font-size: 18px !important;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Heiti SC", "Noto Sans CJK SC", "Source Han Sans CN", "Microsoft YaHei", "SimHei", "黑体", sans-serif !important;
@@ -986,7 +986,7 @@ span.f1 {
 
 .ans-row {
   height: 60px;
-  border-bottom: 1px solid #aaa;
+  border-bottom: 1px solid #a8b4be;
   line-height: 60px;
   font-size: 21px;
   color: #111111 !important;
@@ -1004,7 +1004,7 @@ span.f1 {
 
 .ruled-content {
   width: 100%;
-  background-image: linear-gradient(to bottom, transparent 59px, #aaa 59px, #aaa 60px);
+  background-image: linear-gradient(to bottom, transparent 59px, #a8b4be 59px, #a8b4be 60px);
   background-size: 100% 60px;
   background-repeat: repeat-y;
   background-position: 0 -6px;
@@ -1048,4 +1048,19 @@ span.f1 {
 .sliced-content .highlight,
 .sliced-content .highlight * {
   color: #d32f2f !important;
+}
+
+/* ==========================================================================
+   拟真手写汉字微洇与纸张纤维毛细墨迹扩散效果 (Ink Bleed & Diffusion)
+   ========================================================================== */
+.organic-char {
+  text-shadow: 0 0 0.45px rgba(22, 24, 28, 0.48), 0 0 0.9px rgba(22, 24, 28, 0.16);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.highlight .organic-char,
+.page-container .highlight .organic-char,
+.sliced-content .highlight .organic-char {
+  text-shadow: 0 0 0.45px rgba(211, 47, 47, 0.55), 0 0 0.9px rgba(211, 47, 47, 0.2);
 }

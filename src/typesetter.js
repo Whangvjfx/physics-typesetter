@@ -111,82 +111,139 @@ function compensateTextZoom() {
  * 5. 字距松紧微调 (Kerning/tracking jitter)
  * 6. 纸张纤维微洇笔墨 (Micro ink-bleed diffusion)
  */
+/**
+ * 高熵 32 位整型哈希函数（无可见周期的确定性伪随机）
+ */
+function hash32(a, b, c, d) {
+  let h = (a * 1664525 + b * 1013904223 + c * 374761393 + d * 668265263) >>> 0;
+  h = ((h ^ (h >>> 16)) * 0x45d9f3b) >>> 0;
+  h = ((h ^ (h >>> 16)) * 0x45d9f3b) >>> 0;
+  h = (h ^ (h >>> 16)) >>> 0;
+  return h / 4294967296;
+}
+
+/**
+ * 汉字专属：拟真手写有机扰动引擎 (Organic Chinese Handwriting Engine V2 - Enhanced)
+ * 仅对汉字生效，公式、英文字母、数字和标点完全保持原样不变。
+ * 
+ * 核心升级：
+ * 1. 同字异构化 (6 套大相径庭的字态骨架，长宽比与体势差异高达 40%，绝不重样)
+ * 2. 旋转幅度显著放大 (-9.5° ~ +11.2° 真实手写倾角错落)
+ * 3. 字体大小变化显著放大 (0.78 ~ 1.28 非均质长宽比与大小微变)
+ * 4. 上下浮动大幅放大 (±5.5px 行进起伏与微抖，行内自由流动)
+ * 5. 一句话浓淡深浅波动 (Writing Pressure & Ink Gradient: 起笔浓润、行笔飞动微浅)
+ * 6. 字内笔画粗细变化 (Calligraphic Nib Angle & Directional Shading: 竖/撇粗、横笔细)
+ * 7. 纸张毛细微洇笔墨 (随墨量动态调节扩散光晕)
+ */
 function createOrganicChineseCharGenerator() {
   const charOccurMap = new Map();
   let chineseCharSeq = 0;
+  let charInClause = 0;
 
-  return function formatChineseChar(char) {
-    const count = charOccurMap.get(char) || 0;
-    charOccurMap.set(char, count + 1);
-    const seq = chineseCharSeq++;
+  const profiles = [
+    // 0: 正势端庄 (稳健中正)
+    { sx: 1.00, sy: 1.00, skewX: -1.0, skewY: 0.5, tilt: 1.5, stroke: 0.15, penAng: 55, penW: 0.35, dP: 0.00 },
+    // 1: 扁阔舒展 (横向扩张，重墨厚重)
+    { sx: 1.20, sy: 0.86, skewX: -6.5, skewY: -2.0, tilt: -4.2, stroke: 0.48, penAng: 35, penW: 0.55, dP: 0.09 },
+    // 2: 纵势耸拔 (纵向拉伸，清劲清秀)
+    { sx: 0.85, sy: 1.18, skewX: 5.5, skewY: 2.2, tilt: 6.5, stroke: 0.00, penAng: 75, penW: 0.20, dP: -0.09 },
+    // 3: 疾书大倾 (右倾飞动，行气连贯)
+    { sx: 1.08, sy: 0.94, skewX: -9.5, skewY: 2.0, tilt: 8.2, stroke: 0.30, penAng: 62, penW: 0.42, dP: -0.02 },
+    // 4: 欹侧左倚 (侧锋取势，反向逆倾)
+    { sx: 0.93, sy: 1.08, skewX: 8.5, skewY: -3.0, tilt: -6.8, stroke: 0.42, penAng: 45, penW: 0.48, dP: 0.05 },
+    // 5: 简练收敛 (整体略小，含蓄紧致)
+    { sx: 0.88, sy: 0.88, skewX: -3.0, skewY: 1.0, tilt: 3.2, stroke: 0.10, penAng: 50, penW: 0.25, dP: -0.07 }
+  ];
 
-    // 伪随机哈希，基于字符、字序与重复次数
-    const charCode = char.charCodeAt(0);
-    const hash = (charCode * 37 + seq * 19 + count * 67) % 1000;
-    const r1 = (hash / 1000);
-    const r2 = ((hash * 47) % 1000) / 1000;
-    const r3 = ((hash * 89) % 1000) / 1000;
+  return {
+    resetClause: () => { charInClause = 0; },
+    formatChar: (char, isHighlight = false) => {
+      const count = charOccurMap.get(char) || 0;
+      charOccurMap.set(char, count + 1);
+      const seq = chineseCharSeq++;
+      charInClause++;
 
-    // --- 1. 同字同形异构化 (Homoglyph Differentiation) ---
-    // 重复汉字轮换 4 种不同的形态特征（正势、舒展扁势、挺拔纵势、轻快侧势）
-    const profile = count % 4;
-    let baseScaleX = 1.0;
-    let baseScaleY = 1.0;
-    let baseSkewX = 0;
-    let baseTilt = 0;
-    let strokeExtra = '';
-    let opacity = 0.98;
+      const charCode = char.charCodeAt(0);
+      const r1 = hash32(charCode, seq, count, 101);
+      const r2 = hash32(charCode, seq, count, 203);
+      const r3 = hash32(charCode, seq, count, 307);
+      const r4 = hash32(charCode, seq, count, 409);
+      const r5 = hash32(charCode, seq, count, 521);
 
-    if (profile === 0) {
-      baseScaleX = 1.0;
-      baseScaleY = 1.0;
-      baseSkewX = 0.3;
-      baseTilt = 0.4;
-      opacity = 0.98;
-    } else if (profile === 1) {
-      baseScaleX = 1.045;
-      baseScaleY = 0.96;
-      baseSkewX = -1.5;
-      baseTilt = -1.2;
-      strokeExtra = '-webkit-text-stroke: 0.28px currentColor;';
-      opacity = 1.0;
-    } else if (profile === 2) {
-      baseScaleX = 0.955;
-      baseScaleY = 1.04;
-      baseSkewX = 1.6;
-      baseTilt = 1.4;
-      opacity = 0.94;
-    } else {
-      baseScaleX = 0.98;
-      baseScaleY = 0.98;
-      baseSkewX = -2.2;
-      baseTilt = 2.1;
-      strokeExtra = '-webkit-text-stroke: 0.16px currentColor;';
-      opacity = 0.96;
+      // 1. 同字异构化：6 套姿态骨架轮换
+      const profile = profiles[count % 6];
+
+      // 2. 字体大小变化显著放大：骨架缩放 + ±10% 随机缩放
+      const scaleJitter = 1.0 + (r1 - 0.5) * 0.20;
+      const finalScaleX = (profile.sx * scaleJitter).toFixed(3);
+      const finalScaleY = (profile.sy * scaleJitter).toFixed(3);
+
+      // 3. 文字旋转幅度显著放大：骨架倾斜 + ±3.2° 随机偏角
+      const tiltNoise = (r2 - 0.5) * 6.4;
+      const finalTilt = (profile.tilt + tiltNoise).toFixed(2);
+
+      // 4. 双轴切变 (SkewX & SkewY)
+      const skewNoiseX = (r3 - 0.5) * 3.0;
+      const finalSkewX = (profile.skewX + skewNoiseX).toFixed(2);
+      const finalSkewY = (profile.skewY + (r4 - 0.5) * 1.5).toFixed(2);
+
+      // 5. 上下浮动大幅放大：行进宏观波浪 + 字符随机微抖，范围达 ±5.5px
+      const wave = Math.sin(seq * 0.38 + 0.5) * 2.5 + Math.cos(seq * 0.72) * 1.5;
+      const microJitter = (r5 - 0.5) * 3.5;
+      const deltaY = (wave + microJitter).toFixed(2);
+
+      // 6. 字距自然松紧
+      const marginR = ((r1 - 0.45) * 2.8).toFixed(2);
+      const marginL = ((r2 - 0.5) * 1.4).toFixed(2);
+
+      // 7. 句子宏观深浅与下笔浓淡波动 (Writing Pressure & Ink Density)
+      const clauseWave = Math.sin((charInClause % 14) / 14 * Math.PI) * 0.16;
+      let pressure = 0.88 + profile.dP + clauseWave + (r3 - 0.5) * 0.14;
+      pressure = Math.max(0.68, Math.min(1.04, pressure));
+
+      const opacity = Math.min(1.0, 0.74 + pressure * 0.26).toFixed(2);
+
+      // 8. 字内笔画粗细变化 (Calligraphic Nib Angle & Directional Shading)
+      const penRad = (profile.penAng + (r4 - 0.5) * 16) * Math.PI / 180;
+      const effectiveWeight = profile.penW * (pressure / 0.88);
+      const dx = (Math.cos(penRad) * effectiveWeight).toFixed(2);
+      const dy = (Math.sin(penRad) * effectiveWeight).toFixed(2);
+
+      let strokeCSS = '';
+      const totalStroke = profile.stroke * pressure;
+      if (totalStroke > 0.05) {
+        strokeCSS = `-webkit-text-stroke: ${totalStroke.toFixed(2)}px currentColor;`;
+      }
+
+      // 纸张纤维微洇漫墨 (随墨量动态调节扩散光晕)
+      let shadowCSS = '';
+      if (isHighlight) {
+        const bleed1 = (0.35 + pressure * 0.25).toFixed(2);
+        const bleed2 = (0.80 + pressure * 0.40).toFixed(2);
+        shadowCSS = `text-shadow: ${dx}px ${dy}px 0.2px currentColor, 0 0 ${bleed1}px rgba(211, 47, 47, 0.55), 0 0 ${bleed2}px rgba(211, 47, 47, 0.22);`;
+      } else {
+        const bleed1 = (0.35 + pressure * 0.25).toFixed(2);
+        const bleed2 = (0.80 + pressure * 0.40).toFixed(2);
+        const inkAlpha = (0.35 + pressure * 0.25).toFixed(2);
+        shadowCSS = `text-shadow: ${dx}px ${dy}px 0.2px currentColor, 0 0 ${bleed1}px rgba(22, 24, 28, ${inkAlpha}), 0 0 ${bleed2}px rgba(22, 24, 28, 0.16);`;
+      }
+
+      // 句子内部深浅浓淡渐变
+      let colorCSS = '';
+      if (isHighlight) {
+        const redR = Math.round(180 + (1.04 - pressure) * 45);
+        const redG = Math.round(25 + (1.04 - pressure) * 35);
+        const redB = Math.round(25 + (1.04 - pressure) * 35);
+        colorCSS = `color: rgb(${redR}, ${redG}, ${redB}) !important;`;
+      } else {
+        const gray = Math.round(8 + (1.04 - pressure) * 42);
+        colorCSS = `color: rgb(${gray}, ${gray + 2}, ${gray + 6}) !important;`;
+      }
+
+      const transform = `transform: translateY(${deltaY}px) rotate(${finalTilt}deg) scale(${finalScaleX}, ${finalScaleY}) skew(${finalSkewX}deg, ${finalSkewY}deg);`;
+
+      return `<span class="f1 organic-char" style="display:inline-block; vertical-align:baseline; font-size:1.5em; line-height:21px !important; margin-right:${marginR}px; margin-left:${marginL}px; opacity:${opacity}; ${colorCSS} ${strokeCSS} ${shadowCSS} ${transform}">${char}</span>`;
     }
-
-    // --- 2. 基线自然轻微浮动 (Baseline Jitter) ---
-    // 自然行进起伏 + 字符级微颤，范围控制在 ±1.5px
-    const naturalWave = Math.sin(seq * 0.58) * 0.7;
-    const microJitter = (r1 - 0.5) * 1.6;
-    const deltaY = (naturalWave + microJitter).toFixed(2);
-
-    // --- 3. 微小倾斜角度 (Micro-rotation) ---
-    const tiltNoise = (r2 - 0.5) * 2.2;
-    const finalTilt = (baseTilt + tiltNoise).toFixed(2);
-
-    // --- 4. 大小微小差异 (Size Jitter) ---
-    const scaleFactor = 1.0 + (r3 - 0.5) * 0.06;
-    const finalScaleX = (baseScaleX * scaleFactor).toFixed(3);
-    const finalScaleY = (baseScaleY * scaleFactor).toFixed(3);
-
-    // --- 5. 字距松紧微调 (Kerning Jitter) ---
-    const marginR = ((r1 - 0.4) * 1.6).toFixed(2);
-    const marginL = ((r2 - 0.5) * 0.7).toFixed(2);
-
-    const transform = `transform: translateY(${deltaY}px) rotate(${finalTilt}deg) scale(${finalScaleX}, ${finalScaleY}) skewX(${baseSkewX}deg);`;
-
-    return `<span class="f1 organic-char" style="display:inline-block; vertical-align:baseline; font-size:1.5em; line-height:21px !important; margin-right:${marginR}px; margin-left:${marginL}px; opacity:${opacity}; ${strokeExtra} ${transform}">${char}</span>`;
   };
 }
 
@@ -249,23 +306,36 @@ export async function generateTypesetImages({
     .replace(/^<br>|<br>$/g, '');
 
   // ========== 汉字专属拟真有机打散引擎 ==========
-  const organicCharFormatter = createOrganicChineseCharGenerator();
+  const organicEngine = createOrganicChineseCharGenerator();
   const tokenRegex = /(<[^>]+>)|(\$\$[\s\S]*?\$\$|\$[^$]*?\$)|([\s\S])/g;
   let randomizedText = '';
   let match;
+  let isHighlight = false;
   while ((match = tokenRegex.exec(htmlText)) !== null) {
     if (match[1]) {
-      randomizedText += match[1];
+      const tag = match[1];
+      if (/class=["'][^"']*highlight[^"']*["']/.test(tag)) {
+        isHighlight = true;
+      } else if (/<\/span>/i.test(tag)) {
+        isHighlight = false;
+      }
+      if (/<br\s*\/?>/i.test(tag)) {
+        organicEngine.resetClause();
+      }
+      randomizedText += tag;
     } else if (match[2]) {
       randomizedText += match[2]; // 公式区域原样放行，交由后续 KaTeX 渲染（完全保持原样）
     } else if (match[3]) {
       let char = match[3];
+      if (/[，。、；：？！,.;:?!]/.test(char)) {
+        organicEngine.resetClause();
+      }
       if (char.trim() === '' || char === '\n') {
         randomizedText += char;
       } else {
         if (/[\u4e00-\u9fa5]/.test(char)) {
           // 【核心】：仅汉字应用拟真手写扰动（基线浮动、倾斜、大小微差、字距松紧、同字异构、微洇）
-          randomizedText += organicCharFormatter(char);
+          randomizedText += organicEngine.formatChar(char, isHighlight);
         } else {
           // 【核心】：非汉字（英文字母、数字、西文标点）严格沿用原方法不变！
           randomizedText += `<span class="f1" style="font-size: 1.35em; line-height: 21px !important;">${char}</span>`;

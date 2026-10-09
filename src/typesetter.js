@@ -123,15 +123,15 @@ function hash32(a, b, c, d) {
 }
 
 /**
- * 汉字专属：拟真手写有机扰动引擎 (Organic Chinese Handwriting Engine - Refined & Natural)
+ * 汉字专属：拟真手写有机扰动引擎 (Organic Chinese Handwriting Engine - Expressive & Natural)
  * 仅对汉字生效，公式、英文字母、数字和标点完全保持原样不变。
  * 
- * 黄金平衡设计：
- * 1. 同字异构化 (4 套微态骨架轮换，保证同字各异的同时完全同出一手，绝不突兀变形)
- * 2. 统一温和的书写正向右倾 (+0.4° ~ +4.2°，彻底消除醉汉式大幅乱晃与反向摔倒感)
- * 3. 适度大小比例微调 (0.93 ~ 1.07，消除哈哈镜式拉伸压扁)
- * 4. 柔和基线起伏 (±1.8px ~ ±2.2px，自然贴合信纸横线，整洁而不呆板)
- * 5. 温润深浅呼吸 (0.93 ~ 1.0 墨量平缓波动，起笔深润、行笔清秀，无突兀黑灰斑块)
+ * 黄金平衡校准：
+ * 1. 同字异构化 (5 套张弛有度骨架轮换，保证同一汉字重复出现时轮廓、大小、朝向各异，绝不重样)
+ * 2. 舒展自然的旋转角度 (-1.5° ~ +6.0°，主轴自然右倾，带生动错落手感，绝无死板机械感)
+ * 3. 适度字号与宽高比变化 (0.90 ~ 1.12，高矮胖瘦生动分明，绝不产生哈哈镜畸变)
+ * 4. 灵动基线波浪浮动 (-3.0px ~ +3.2px，清晰可见字底高低起伏，自然贴合信纸横线)
+ * 5. 丰富墨色深浅呼吸感 (墨量起伏自然，起笔深润、行笔清秀，透出真实手写呼吸节奏)
  * 6. 真实纸张墨迹微洇 (细腻毛细微漫射，消除数码矢量生硬感)
  */
 function createOrganicChineseCharGenerator() {
@@ -139,16 +139,18 @@ function createOrganicChineseCharGenerator() {
   let chineseCharSeq = 0;
   let charInClause = 0;
 
-  // 4 套自然内敛的书写微态骨架（同出一手，和谐生动，绝不怪异扭曲）
+  // 5 套张弛有度、舒展自然的书写体态（明显看出不同，又绝无怪异畸变）
   const profiles = [
-    // 0: 稳正自然 (标准从容)
-    { sx: 1.00, sy: 1.00, rot: 1.8, skew: -0.8, stroke: 0.08, dP: 0.00 },
-    // 1: 略舒微展 (略显宽博，笔墨饱满)
-    { sx: 1.045, sy: 0.965, rot: 1.2, skew: -1.4, stroke: 0.15, dP: 0.04 },
-    // 2: 稍拔清劲 (体势稍挺，秀逸清爽)
-    { sx: 0.965, sy: 1.04, rot: 2.8, skew: -0.4, stroke: 0.00, dP: -0.04 },
-    // 3: 疾书轻快 (稍显小巧，笔势连贯)
-    { sx: 0.97, sy: 0.97, rot: 2.3, skew: -1.0, stroke: 0.10, dP: -0.02 }
+    // 0: 稳正主态 (从容适中)
+    { sx: 1.00, sy: 1.00, rot: 2.2, skew: -1.2, stroke: 0.12, dP: 0.00 },
+    // 1: 舒展宽势 (略宽略扁，饱满重墨)
+    { sx: 1.085, sy: 0.935, rot: 1.4, skew: -2.2, stroke: 0.24, dP: 0.06 },
+    // 2: 纵势修挺 (略高略瘦，清劲清逸)
+    { sx: 0.925, sy: 1.075, rot: 4.2, skew: -0.8, stroke: 0.00, dP: -0.05 },
+    // 3: 疾书连势 (右倾飞动，行气连贯)
+    { sx: 1.03, sy: 0.96, rot: 5.0, skew: -2.8, stroke: 0.16, dP: -0.02 },
+    // 4: 凝敛小态 (小巧含蓄，清秀端方)
+    { sx: 0.92, sy: 0.93, rot: -0.6, skew: -0.6, stroke: 0.08, dP: -0.04 }
   ];
 
   return {
@@ -165,62 +167,62 @@ function createOrganicChineseCharGenerator() {
       const r3 = hash32(charCode, seq, count, 307);
       const r4 = hash32(charCode, seq, count, 409);
 
-      // 1. 同字异构化：4 套自然骨架轮换
-      const profile = profiles[count % 4];
+      // 1. 同字异构化：5 套体态骨架轮换
+      const profile = profiles[count % 5];
 
-      // 2. 大小微扰：在骨架基础上叠加 ±3.5% 自然微差
-      const scaleJitter = 1.0 + (r1 - 0.5) * 0.07;
+      // 2. 字体大小变化适度放大 (骨架 + ±5% 随机缩放)
+      const scaleJitter = 1.0 + (r1 - 0.5) * 0.10;
       const finalScaleX = (profile.sx * scaleJitter).toFixed(3);
       const finalScaleY = (profile.sy * scaleJitter).toFixed(3);
 
-      // 3. 自然书写偏角：基准 +1.8° 右倾，微抖 ±1.4°（总倾角 +0.4° ~ +3.8°，符合右手书写常态）
-      const tiltNoise = (r2 - 0.5) * 2.8;
+      // 3. 旋转角度适度放大 (-1.5° ~ +6.5°，整体呈自然书写右倾，但有明显倾斜差异)
+      const tiltNoise = (r2 - 0.5) * 3.6;
       const finalTilt = (profile.rot + tiltNoise).toFixed(2);
 
-      // 4. 自然行书微倾 (仅用极微小负向 skewX，绝不扭曲成怪异平行四边形)
-      const skewNoise = (r3 - 0.5) * 0.8;
+      // 4. 自然行书微倾
+      const skewNoise = (r3 - 0.5) * 1.2;
       const finalSkewX = (profile.skew + skewNoise).toFixed(2);
 
-      // 5. 基线起伏：行进微波浪 + 字符轻微浮动，范围控制在 ±2.0px，自然贴合横线
-      const wave = Math.sin(seq * 0.32 + 0.4) * 1.1;
-      const microJitter = (r4 - 0.5) * 1.5;
+      // 5. 上下基线浮动适度放大 (±3.2px，清晰可见高低起伏，但绝不跳脱出格)
+      const wave = Math.sin(seq * 0.35 + 0.4) * 1.8;
+      const microJitter = (r4 - 0.5) * 2.4;
       const deltaY = (wave + microJitter).toFixed(2);
 
-      // 6. 字距自然呼吸感
-      const marginR = ((r1 - 0.42) * 1.2).toFixed(2);
-      const marginL = ((r2 - 0.5) * 0.6).toFixed(2);
+      // 6. 字距自然松紧
+      const marginR = ((r1 - 0.42) * 1.8).toFixed(2);
+      const marginL = ((r2 - 0.5) * 0.9).toFixed(2);
 
-      // 7. 句子下笔深浅呼吸（墨量平缓波动，起笔深润、行笔清秀）
-      const clauseWave = Math.sin((charInClause % 12) / 12 * Math.PI) * 0.06;
-      let pressure = 0.94 + profile.dP + clauseWave + (r3 - 0.5) * 0.05;
-      pressure = Math.max(0.88, Math.min(1.02, pressure));
+      // 7. 句子下笔深浅浓淡波动 (明显深浅呼吸)
+      const clauseWave = Math.sin((charInClause % 12) / 12 * Math.PI) * 0.10;
+      let pressure = 0.92 + profile.dP + clauseWave + (r3 - 0.5) * 0.08;
+      pressure = Math.max(0.82, Math.min(1.04, pressure));
 
-      const opacity = Math.min(1.0, 0.91 + pressure * 0.09).toFixed(2);
+      const opacity = Math.min(1.0, 0.86 + pressure * 0.14).toFixed(2);
 
-      // 8. 笔画轮廓极轻微调节（绝不模糊变糊）
+      // 8. 笔画轮廓粗细微调
       let strokeCSS = '';
       if (profile.stroke > 0.02) {
         strokeCSS = `-webkit-text-stroke: ${profile.stroke.toFixed(2)}px currentColor;`;
       }
 
-      // 9. 真实纸张墨迹微洇（柔和自然扩散，消除数码毛刺）
+      // 9. 真实纸张墨迹微洇与纤维渗透
       let shadowCSS = '';
       if (isHighlight) {
-        shadowCSS = `text-shadow: 0 0 0.38px rgba(211, 47, 47, 0.50), 0 0 0.75px rgba(211, 47, 47, 0.15);`;
+        shadowCSS = `text-shadow: 0 0 0.40px rgba(211, 47, 47, 0.52), 0 0 0.80px rgba(211, 47, 47, 0.16);`;
       } else {
-        shadowCSS = `text-shadow: 0 0 0.38px rgba(20, 22, 26, 0.42), 0 0 0.75px rgba(20, 22, 26, 0.12);`;
+        shadowCSS = `text-shadow: 0 0 0.40px rgba(18, 20, 24, 0.45), 0 0 0.80px rgba(18, 20, 24, 0.14);`;
       }
 
-      // 墨色深浅（在纯正黑墨至温润墨色之间微调）
+      // 墨色深浅浓淡 (深黑至润墨自然过渡)
       let colorCSS = '';
       if (isHighlight) {
-        const redR = Math.round(205 + (1.02 - pressure) * 18);
-        const redG = Math.round(40 + (1.02 - pressure) * 15);
-        const redB = Math.round(40 + (1.02 - pressure) * 15);
+        const redR = Math.round(195 + (1.04 - pressure) * 28);
+        const redG = Math.round(35 + (1.04 - pressure) * 22);
+        const redB = Math.round(35 + (1.04 - pressure) * 22);
         colorCSS = `color: rgb(${redR}, ${redG}, ${redB}) !important;`;
       } else {
-        const gray = Math.round(18 + (1.02 - pressure) * 16);
-        colorCSS = `color: rgb(${gray}, ${gray + 2}, ${gray + 4}) !important;`;
+        const gray = Math.round(14 + (1.04 - pressure) * 26);
+        colorCSS = `color: rgb(${gray}, ${gray + 2}, ${gray + 5}) !important;`;
       }
 
       const transform = `transform: translateY(${deltaY}px) rotate(${finalTilt}deg) scale(${finalScaleX}, ${finalScaleY}) skewX(${finalSkewX}deg);`;

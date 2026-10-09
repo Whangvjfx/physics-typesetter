@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, feature/organic-handwriting ]
     tags:
       - 'v*'
   workflow_dispatch:
@@ -47,12 +47,12 @@ jobs:
       - name: Rename and Prepare APK
         run: |
           mkdir -p output
-          cp android/app/build/outputs/apk/debug/app-debug.apk output/PhysicsTypesetter.apk
-          ls -lh output/PhysicsTypesetter.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk output/PhysicsTypesetter-V2.apk
+          ls -lh output/PhysicsTypesetter-V2.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PhysicsTypesetter-Android-APK
-          path: output/PhysicsTypesetter.apk
+          name: PhysicsTypesetter-V2-Android-APK
+          path: output/PhysicsTypesetter-V2.apk
           retention-days: 30

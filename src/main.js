@@ -8,6 +8,7 @@ import {
 // 状态管理
 let pastedImageSrc = null;
 let imageWidth = 250;
+let nonlinearVal = 60; // 0 ~ 100 非线性度百分比
 let currentGeneratedImages = [];
 
 // DOM 元素引用
@@ -17,6 +18,10 @@ const uploadBtn = document.getElementById('upload-btn');
 const previewImgContainer = document.getElementById('preview-img-container');
 const imgScale = document.getElementById('img-scale');
 const imgScaleVal = document.getElementById('img-scale-val');
+const nonlinearSlider = document.getElementById('nonlinear-slider');
+const nonlinearValText = document.getElementById('nonlinear-val-text');
+const nonlinearTierBadge = document.getElementById('nonlinear-tier-badge');
+const presetBtns = document.querySelectorAll('.preset-btn');
 const btnInsertBackslash = document.getElementById('btn-insert-backslash');
 const btnPasteText = document.getElementById('btn-paste-text');
 const btnLoadSample = document.getElementById('btn-load-sample');
@@ -30,11 +35,34 @@ const lightboxImg = document.getElementById('lightbox-img');
 const lightboxClose = document.getElementById('lightbox-close');
 
 // ==========================================================================
-// 1. 草稿持久化与初始化
+// 1. 非线性等级描述与 UI 更新
+// ==========================================================================
+function getNonlinearTierDesc(val) {
+  if (val <= 15) return '规整微澜';
+  if (val <= 45) return '秀雅舒展';
+  if (val <= 75) return '自然生动';
+  return '笔势纵逸';
+}
+
+function updateNonlinearUI(val) {
+  nonlinearVal = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
+  if (nonlinearSlider) nonlinearSlider.value = nonlinearVal;
+  if (nonlinearValText) nonlinearValText.innerText = `${nonlinearVal}%`;
+  if (nonlinearTierBadge) nonlinearTierBadge.innerText = getNonlinearTierDesc(nonlinearVal);
+
+  presetBtns.forEach(btn => {
+    const btnVal = parseInt(btn.getAttribute('data-val'), 10);
+    btn.classList.toggle('active', btnVal === nonlinearVal);
+  });
+}
+
+// ==========================================================================
+// 2. 草稿持久化与初始化
 // ==========================================================================
 function loadDraft() {
   const savedText = localStorage.getItem('physics_draft_text');
   const savedScale = localStorage.getItem('physics_draft_scale');
+  const savedNonlinear = localStorage.getItem('physics_draft_nonlinear');
   if (savedText && !aiInput.value) {
     aiInput.value = savedText;
   }
@@ -43,11 +71,17 @@ function loadDraft() {
     imgScale.value = imageWidth;
     imgScaleVal.innerText = `${imageWidth} px`;
   }
+  if (savedNonlinear !== null) {
+    updateNonlinearUI(parseInt(savedNonlinear, 10));
+  } else {
+    updateNonlinearUI(60);
+  }
 }
 
 function saveDraft() {
   localStorage.setItem('physics_draft_text', aiInput.value);
   localStorage.setItem('physics_draft_scale', imageWidth.toString());
+  localStorage.setItem('physics_draft_nonlinear', nonlinearVal.toString());
 }
 
 // ==========================================================================
@@ -192,6 +226,26 @@ imgScale.addEventListener('input', (e) => {
   saveDraft();
 });
 
+// 非线性滑块与预设按钮交互
+if (nonlinearSlider) {
+  nonlinearSlider.addEventListener('input', (e) => {
+    updateNonlinearUI(e.target.value);
+    saveDraft();
+  });
+  nonlinearSlider.addEventListener('change', () => {
+    triggerHaptic('light');
+  });
+}
+
+presetBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    triggerHaptic('light');
+    const val = parseInt(btn.getAttribute('data-val'), 10);
+    updateNonlinearUI(val);
+    saveDraft();
+  });
+});
+
 // ==========================================================================
 // 4. 一键排版生成
 // ==========================================================================
@@ -214,6 +268,7 @@ async function handleGenerate() {
       rawText,
       pastedImageSrc,
       imageWidth,
+      nonlinearIntensity: nonlinearVal / 100,
       captureZone,
       onProgress: ({ message }) => {
         genBtn.innerHTML = `<span>⏳ ${message}</span>`;

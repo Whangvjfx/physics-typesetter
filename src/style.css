@@ -428,6 +428,82 @@ body {
   border-color: #e2e8f0;
 }
 
+/* 非线性专属滑块外观与预设按钮 */
+.nonlinear-deck {
+  border-left: 3px solid var(--amber-gold) !important;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, var(--bg-card) 100%) !important;
+}
+
+[data-theme="light"] .nonlinear-deck {
+  border-left: 3px solid #059669 !important;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f8fafc 100%) !important;
+}
+
+.badge-nonlinear {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--amber-gold);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+[data-theme="light"] .badge-nonlinear {
+  background: #d1fae5;
+  color: #047857;
+  border-color: #6ee7b7;
+}
+
+.nonlinear-presets {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.preset-btn {
+  flex: 1;
+  padding: 5px 0;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.preset-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text-primary);
+}
+
+.preset-btn.active {
+  background: var(--amber-gold);
+  border-color: var(--amber-gold);
+  color: #07090e;
+  box-shadow: 0 0 10px var(--amber-glow);
+}
+
+[data-theme="light"] .preset-btn {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+[data-theme="light"] .preset-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+[data-theme="light"] .preset-btn.active {
+  background: #059669;
+  border-color: #059669;
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(5, 150, 105, 0.3);
+}
+
 .slider-deck-header {
   display: flex;
   justify-content: space-between;

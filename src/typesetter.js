@@ -123,34 +123,52 @@ function hash32(a, b, c, d) {
 }
 
 /**
- * 汉字专属：拟真手写有机扰动引擎 (Organic Chinese Handwriting Engine - Expressive & Natural)
+ * 汉字专属：非线性动力学真手写形变引擎 (Nonlinear Dynamics Chinese Handwriting Engine)
  * 仅对汉字生效，公式、英文字母、数字和标点完全保持原样不变。
  * 
- * 黄金平衡校准：
- * 1. 同字异构化 (5 套张弛有度骨架轮换，保证同一汉字重复出现时轮廓、大小、朝向各异，绝不重样)
- * 2. 舒展自然的旋转角度 (-1.5° ~ +6.0°，主轴自然右倾，带生动错落手感，绝无死板机械感)
- * 3. 适度字号与宽高比变化 (0.90 ~ 1.12，高矮胖瘦生动分明，绝不产生哈哈镜畸变)
- * 4. 灵动基线波浪浮动 (-3.0px ~ +3.2px，清晰可见字底高低起伏，自然贴合信纸横线)
- * 5. 丰富墨色深浅呼吸感 (墨量起伏自然，起笔深润、行笔清秀，透出真实手写呼吸节奏)
- * 6. 真实纸张墨迹微洇 (细腻毛细微漫射，消除数码矢量生硬感)
+ * 核心创新：打破全局仿射线性变换限制，引入空间透视逆射投射、偏心极点漂移、混沌相移谐波及字内墨压梯度：
+ * 
+ * 1. 空间透视逆射变换 (3D Projective Homography Warp):
+ *    通过 perspective(d) + rotateX(rx) + rotateY(ry) + rotateZ(rz) 生成非线性 2D 投影。
+ *    在笛卡尔坐标系中，局部变换率随坐标 (x, y) 空间位置非均匀变化（倒梯形、正梯形、不对称楔形收展），
+ *    使得同一汉字的上部与下部、左部与右部具有完全不同的形变率，彻底打破平行线约束！
+ * 
+ * 2. 偏心极点漂移 (Eccentric Transform-Origin Drift):
+ *    动态偏离中心 50% 50%，模拟执笔支点随笔势在字形左上/右下/中心的动态转移。
+ * 
+ * 3. 混沌相移多频谐波行气 (Chaotic Multi-Harmonic Baseline Drift):
+ *    引入非周期性谐波耦合，消除周期性波浪假感。
+ * 
+ * 4. 8套非线性动力学异构形态骨架 (8 Non-linear Structural Profiles):
+ *    涵盖：稳正中和、俯势倒梯、仰势正梯、左欹敛势、右拓连笔、纵拔挺峰、横张宽博、微倚侧峰。
+ * 
+ * 5. 全动态可调参数 (nonlinearIntensity):
+ *    0.0 (完全平正无透视形变) ~ 1.0 (极富张力的非线性书法态)，默认 0.60。
  */
-function createOrganicChineseCharGenerator() {
+function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
+  const K = Math.max(0.0, Math.min(1.0, Number(nonlinearIntensity) ?? 0.60));
   const charOccurMap = new Map();
   let chineseCharSeq = 0;
   let charInClause = 0;
 
-  // 5 套张弛有度、舒展自然的书写体态（明显看出不同，又绝无怪异畸变）
+  // 8 套张弛有度、非线性空间投影骨架 (涵盖倒梯形、正梯形、不对称楔形收放)
   const profiles = [
-    // 0: 稳正主态 (从容适中)
-    { sx: 1.00, sy: 1.00, rot: 2.2, skew: -1.2, stroke: 0.12, dP: 0.00 },
-    // 1: 舒展宽势 (略宽略扁，饱满重墨)
-    { sx: 1.085, sy: 0.935, rot: 1.4, skew: -2.2, stroke: 0.24, dP: 0.06 },
-    // 2: 纵势修挺 (略高略瘦，清劲清逸)
-    { sx: 0.925, sy: 1.075, rot: 4.2, skew: -0.8, stroke: 0.00, dP: -0.05 },
-    // 3: 疾书连势 (右倾飞动，行气连贯)
-    { sx: 1.03, sy: 0.96, rot: 5.0, skew: -2.8, stroke: 0.16, dP: -0.02 },
-    // 4: 凝敛小态 (小巧含蓄，清秀端方)
-    { sx: 0.92, sy: 0.93, rot: -0.6, skew: -0.6, stroke: 0.08, dP: -0.04 }
+    // 0: 稳正中和态 (基准适中，轻微正向右倾)
+    { sx: 1.00, sy: 1.00, rotX: 1.5, rotY: -1.0, rotZ: 2.2, skew: -1.0, stroke: 0.10, dP: 0.00, pDist: 340, ox: 50, oy: 52 },
+    // 1: 俯势倒梯态 (上宽下收，下笔沉稳，倒梯形透视)
+    { sx: 1.07, sy: 0.94, rotX: 11.0, rotY: -2.5, rotZ: 1.8, skew: -1.8, stroke: 0.22, dP: 0.06, pDist: 240, ox: 52, oy: 65 },
+    // 2: 仰势正梯态 (下盘拓开，上部聚气，正梯形透视)
+    { sx: 0.95, sy: 1.06, rotX: -10.0, rotY: 3.0, rotZ: 3.6, skew: -0.6, stroke: 0.02, dP: -0.04, pDist: 250, ox: 48, oy: 35 },
+    // 3: 左欹修长态 (左侧挺拔，右侧微虚，左高右低楔形)
+    { sx: 0.93, sy: 1.05, rotX: -3.0, rotY: -9.0, rotZ: 4.8, skew: -2.4, stroke: 0.05, dP: -0.03, pDist: 260, ox: 38, oy: 50 },
+    // 4: 右拓纵逸态 (右肩放开，顺势疾书，右高左低楔形)
+    { sx: 1.04, sy: 0.97, rotX: 4.0, rotY: 8.5, rotZ: 5.2, skew: -2.6, stroke: 0.16, dP: -0.01, pDist: 250, ox: 62, oy: 48 },
+    // 5: 凝敛小核态 (内聚紧凑，清秀端方，微左依)
+    { sx: 0.92, sy: 0.93, rotX: -2.0, rotY: -1.5, rotZ: -0.8, skew: -0.5, stroke: 0.08, dP: -0.05, pDist: 320, ox: 50, oy: 48 },
+    // 6: 横张雄浑态 (字势宽扁，骨力充沛)
+    { sx: 1.09, sy: 0.92, rotX: 7.0, rotY: -5.0, rotZ: 1.2, skew: -1.5, stroke: 0.20, dP: 0.05, pDist: 270, ox: 53, oy: 58 },
+    // 7: 侧峰凌虚态 (斜势取险，体态灵动)
+    { sx: 0.96, sy: 1.02, rotX: -6.0, rotY: 6.0, rotZ: 4.0, skew: -1.2, stroke: 0.12, dP: 0.01, pDist: 280, ox: 45, oy: 42 }
   ];
 
   return {
@@ -166,71 +184,101 @@ function createOrganicChineseCharGenerator() {
       const r2 = hash32(charCode, seq, count, 203);
       const r3 = hash32(charCode, seq, count, 307);
       const r4 = hash32(charCode, seq, count, 409);
+      const r5 = hash32(charCode, seq, count, 521);
+      const r6 = hash32(charCode, seq, count, 631);
 
-      // 1. 同字异构化：5 套体态骨架轮换
-      const profile = profiles[count % 5];
+      // 1. 同字异形轮转 (8套骨架，同字出现时大相径庭)
+      const profile = profiles[count % 8];
 
-      // 2. 字体大小变化适度放大 (骨架 + ±5% 随机缩放)
-      const scaleJitter = 1.0 + (r1 - 0.5) * 0.10;
+      // 2. 尺度与长宽比非线性缩放 (受 K 调控)
+      const scaleJitter = 1.0 + (r1 - 0.5) * (0.12 * K);
       const finalScaleX = (profile.sx * scaleJitter).toFixed(3);
       const finalScaleY = (profile.sy * scaleJitter).toFixed(3);
 
-      // 3. 旋转角度适度放大 (-1.5° ~ +6.5°，整体呈自然书写右倾，但有明显倾斜差异)
-      const tiltNoise = (r2 - 0.5) * 3.6;
-      const finalTilt = (profile.rot + tiltNoise).toFixed(2);
+      // 3. 非线性 3D 空间透视逆射参数 (核心创新：生成倒梯形、正梯形、斜切不等边梯形)
+      const rxNoise = (r2 - 0.5) * 5.0 * K;
+      const finalRotX = ((profile.rotX + rxNoise) * K).toFixed(2);
 
-      // 4. 自然行书微倾
-      const skewNoise = (r3 - 0.5) * 1.2;
+      const ryNoise = (r3 - 0.5) * 4.5 * K;
+      const finalRotY = ((profile.rotY + ryNoise) * K).toFixed(2);
+
+      // 4. 自然右手执笔主轴旋转
+      const rzNoise = (r4 - 0.5) * 3.2 * K;
+      const finalRotZ = (profile.rotZ + rzNoise).toFixed(2);
+
+      // 5. 偏心极点漂移 (支点离开绝对中心)
+      const originX = (profile.ox + (r5 - 0.5) * 16 * K).toFixed(1);
+      const originY = (profile.oy + (r6 - 0.5) * 16 * K).toFixed(1);
+
+      // 6. 透视景深距离 (越近透视变形越明显，越远越接近平面)
+      const pDist = Math.round(profile.pDist - (K - 0.5) * 80 + (r1 - 0.5) * 40);
+
+      // 7. 顺势微倾斜
+      const skewNoise = (r3 - 0.5) * 1.0 * K;
       const finalSkewX = (profile.skew + skewNoise).toFixed(2);
 
-      // 5. 上下基线浮动适度放大 (±3.2px，清晰可见高低起伏，但绝不跳脱出格)
-      const wave = Math.sin(seq * 0.35 + 0.4) * 1.8;
-      const microJitter = (r4 - 0.5) * 2.4;
-      const deltaY = (wave + microJitter).toFixed(2);
+      // 8. 混沌谐波基线浮动 (长短波耦合，杜绝死板周期正弦)
+      const wave1 = Math.sin(seq * 0.35 + 0.4) * 1.6;
+      const wave2 = Math.sin(Math.pow(seq, 1.22) * 0.18 + 0.9) * 0.8 * K;
+      const microJitter = (r4 - 0.5) * (2.2 * (0.6 + 0.4 * K));
+      const deltaY = (wave1 + wave2 + microJitter).toFixed(2);
 
-      // 6. 字距自然松紧
-      const marginR = ((r1 - 0.42) * 1.8).toFixed(2);
-      const marginL = ((r2 - 0.5) * 0.9).toFixed(2);
+      // 9. 字距呼吸微调
+      const marginR = ((r1 - 0.42) * (1.6 * (0.5 + 0.5 * K))).toFixed(2);
+      const marginL = ((r2 - 0.5) * (0.8 * (0.5 + 0.5 * K))).toFixed(2);
 
-      // 7. 句子下笔深浅浓淡波动 (明显深浅呼吸)
+      // 10. 句子下笔深浅浓淡波动
       const clauseWave = Math.sin((charInClause % 12) / 12 * Math.PI) * 0.10;
-      let pressure = 0.92 + profile.dP + clauseWave + (r3 - 0.5) * 0.08;
-      pressure = Math.max(0.82, Math.min(1.04, pressure));
+      let pressure = 0.92 + profile.dP * K + clauseWave + (r3 - 0.5) * 0.08 * K;
+      pressure = Math.max(0.82, Math.min(1.05, pressure));
 
       const opacity = Math.min(1.0, 0.86 + pressure * 0.14).toFixed(2);
 
-      // 8. 笔画轮廓粗细微调
+      // 11. 笔画轮廓粗细微调
       let strokeCSS = '';
-      if (profile.stroke > 0.02) {
-        strokeCSS = `-webkit-text-stroke: ${profile.stroke.toFixed(2)}px currentColor;`;
+      const currentStroke = profile.stroke * (0.5 + 0.5 * K);
+      if (currentStroke > 0.02) {
+        strokeCSS = `-webkit-text-stroke: ${currentStroke.toFixed(2)}px currentColor;`;
       }
 
-      // 9. 真实纸张墨迹微洇与纤维渗透
+      // 12. 非线性不对称纸张微洇与毛细渗透效果 (阴影方向根据笔势动态不对称漂移)
+      const shadowDx = ((r5 - 0.5) * 0.35 * K).toFixed(2);
+      const shadowDy = ((r6 - 0.5) * 0.35 * K).toFixed(2);
       let shadowCSS = '';
       if (isHighlight) {
-        shadowCSS = `text-shadow: 0 0 0.40px rgba(211, 47, 47, 0.52), 0 0 0.80px rgba(211, 47, 47, 0.16);`;
+        shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px 0.40px rgba(211, 47, 47, 0.52), 0 0 0.80px rgba(211, 47, 47, 0.16);`;
       } else {
-        shadowCSS = `text-shadow: 0 0 0.40px rgba(18, 20, 24, 0.45), 0 0 0.80px rgba(18, 20, 24, 0.14);`;
+        shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px 0.40px rgba(18, 20, 24, 0.45), 0 0 0.80px rgba(18, 20, 24, 0.14);`;
       }
 
       // 墨色深浅浓淡 (深黑至润墨自然过渡)
       let colorCSS = '';
       if (isHighlight) {
-        const redR = Math.round(195 + (1.04 - pressure) * 28);
-        const redG = Math.round(35 + (1.04 - pressure) * 22);
-        const redB = Math.round(35 + (1.04 - pressure) * 22);
+        const redR = Math.round(195 + (1.05 - pressure) * 28);
+        const redG = Math.round(35 + (1.05 - pressure) * 22);
+        const redB = Math.round(35 + (1.05 - pressure) * 22);
         colorCSS = `color: rgb(${redR}, ${redG}, ${redB}) !important;`;
       } else {
-        const gray = Math.round(14 + (1.04 - pressure) * 26);
+        const gray = Math.round(14 + (1.05 - pressure) * 26);
         colorCSS = `color: rgb(${gray}, ${gray + 2}, ${gray + 5}) !important;`;
       }
 
-      const transform = `transform: translateY(${deltaY}px) rotate(${finalTilt}deg) scale(${finalScaleX}, ${finalScaleY}) skewX(${finalSkewX}deg);`;
+      // 核心：若 K > 0.05 则引入 perspective 3D 透视逆射非线性形变，若 K 近似 0 则平正退化
+      let transform;
+      let originCSS = `transform-origin: ${originX}% ${originY}%;`;
+      if (K > 0.05) {
+        transform = `transform: perspective(${pDist}px) rotateX(${finalRotX}deg) rotateY(${finalRotY}deg) rotateZ(${finalRotZ}deg) translateY(${deltaY}px) scale(${finalScaleX}, ${finalScaleY}) skewX(${finalSkewX}deg);`;
+      } else {
+        transform = `transform: translateY(${deltaY}px) rotate(${finalRotZ}deg) scale(${finalScaleX}, ${finalScaleY}) skewX(${finalSkewX}deg);`;
+      }
 
-      return `<span class="f1 organic-char" style="display:inline-block; vertical-align:baseline; font-size:1.5em; line-height:21px !important; margin-right:${marginR}px; margin-left:${marginL}px; opacity:${opacity}; ${colorCSS} ${strokeCSS} ${shadowCSS} ${transform}">${char}</span>`;
+      return `<span class="f1 organic-char" style="display:inline-block; vertical-align:baseline; font-size:1.5em; line-height:21px !important; margin-right:${marginR}px; margin-left:${marginL}px; opacity:${opacity}; ${colorCSS} ${strokeCSS} ${shadowCSS} ${originCSS} ${transform}">${char}</span>`;
     }
   };
 }
+
+// 兼容别名
+const createOrganicChineseCharGenerator = createNonlinearChineseCharGenerator;
 
 /**
  * 核心排版引擎 (V2 拟真手写版 - Organic Typesetting Engine)
@@ -239,6 +287,7 @@ export async function generateTypesetImages({
   rawText,
   pastedImageSrc = null,
   imageWidth = 250,
+  nonlinearIntensity = 0.60,
   captureZone,
   onProgress = () => {},
   onLayout = null
@@ -290,8 +339,8 @@ export async function generateTypesetImages({
     .replace(/(<br>)+/g, '<br>')
     .replace(/^<br>|<br>$/g, '');
 
-  // ========== 汉字专属拟真有机打散引擎 ==========
-  const organicEngine = createOrganicChineseCharGenerator();
+  // ========== 汉字专属非线性动力学打散引擎 ==========
+  const organicEngine = createNonlinearChineseCharGenerator(nonlinearIntensity);
   const tokenRegex = /(<[^>]+>)|(\$\$[\s\S]*?\$\$|\$[^$]*?\$)|([\s\S])/g;
   let randomizedText = '';
   let match;

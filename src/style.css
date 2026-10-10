@@ -27,6 +27,48 @@
   font-display: swap;
 }
 
+/* 希腊字母与常用物理数学符号专属手写体 (解决 \alpha, \beta, \theta 等字符缺失变成印刷体的问题) */
+@font-face {
+  font-family: 'HandwritingGreek';
+  src: url('/fonts/Handwriting-Greek.woff2') format('woff2'),
+       url('/fonts/Handwriting-Greek.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F;
+}
+
+@font-face {
+  font-family: 'HandwritingGreek';
+  src: url('/fonts/Handwriting-Greek-Bold.woff2') format('woff2'),
+       url('/fonts/Handwriting-Greek-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F;
+}
+
+/* 将希腊手写字符集无缝补充进 Caveat 字体族，确保任何声明 Caveat 的地方都能优雅渲染希腊字母 */
+@font-face {
+  font-family: 'Caveat';
+  src: url('/fonts/Handwriting-Greek.woff2') format('woff2'),
+       url('/fonts/Handwriting-Greek.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F;
+}
+
+@font-face {
+  font-family: 'Caveat';
+  src: url('/fonts/Handwriting-Greek-Bold.woff2') format('woff2'),
+       url('/fonts/Handwriting-Greek-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F;
+}
+
 @font-face {
   font-family: 'MyHandwriting';
   src: url('/fonts/myfont.woff2') format('woff2');
@@ -981,32 +1023,46 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 4px;
 }
 
-/* 优先调用 Caveat 英文手写，没有的再 fallback 给中文手写体 */
-.page-container, .page-container *,
-#master-box, #master-box *,
-#capture-zone, #capture-zone *,
-.sliced-content, .sliced-content * {
-  font-family: 'Caveat', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
-  color: #111111 !important;
+/* 优先调用 Caveat 英文手写，紧接着是希腊手写体，没有的再 fallback 给中文手写体与通用楷体 */
+.page-container,
+#master-box,
+#capture-zone,
+.sliced-content {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif;
+  color: #111111;
 }
 
 span.f1 {
-  font-family: 'Caveat', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
-  color: #111111 !important;
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif;
+  color: inherit;
 }
 
-/* KaTeX 专属覆盖：为公式注入纯正的手写灵魂与纯黑色彩 */
+/* 物理数学特定运算符与符号（如 ≠, ≤, ≥, ±, ×, ÷, ≈ 等）：优先采用 KaTeX 标准符号字体，防止手写字体缺少符号定义 */
+span.f1.math-sym {
+  font-family: 'KaTeX_Main', 'HandwritingGreek', 'MyHandwriting', sans-serif !important;
+  color: inherit;
+}
+
+/* KaTeX 基础容器样式 */
 .katex {
-  font-family: 'Caveat', 'MyHandwriting', cursive !important;
   font-size: 1.25em !important;
-  color: #111111 !important;
+  color: inherit;
 }
 
 /* 解除公式内部的 60px 限制，防止上下标被拉扯破碎 */
 .katex * {
-  font-family: 'Caveat', 'MyHandwriting', 'KaTeX_Math', 'KaTeX_Main', cursive !important;
   line-height: normal !important;
-  color: #111111 !important;
+}
+
+/* 仅对公式中的变量、常数与斜体字母应用手写字体（包含拉丁手写与希腊手写），保留运算符、关系符（如 ≠、=、+ 等）的原生符号字体 */
+.katex .mathnormal,
+.katex .mord.mathnormal {
+  font-family: 'Caveat', 'HandwritingGreek', cursive !important;
+}
+
+/* 公式中普通正体字母或大写希腊字母（如 \Delta, \Omega 等）也享受手写体 */
+.katex .mord {
+  font-family: 'Caveat', 'HandwritingGreek', 'KaTeX_Main', cursive;
 }
 
 /* 独立公式块 (block math) 的容器基础设定，稍后在 JS 中会被强行锁定为 60 的倍数高度 */
@@ -1015,7 +1071,7 @@ span.f1 {
   padding-left: 1em !important;
   margin: 0 !important;
   display: block;
-  color: #111111 !important;
+  color: inherit;
 }
 
 .page-container {

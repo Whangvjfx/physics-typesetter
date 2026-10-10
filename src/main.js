@@ -38,10 +38,11 @@ const lightboxClose = document.getElementById('lightbox-close');
 // 1. 非线性等级描述与 UI 更新
 // ==========================================================================
 function getNonlinearTierDesc(val) {
-  if (val <= 15) return '规整微澜';
-  if (val <= 45) return '秀雅舒展';
-  if (val <= 75) return '自然生动';
-  return '笔势纵逸';
+  if (val === 0) return '规整端楷';
+  if (val <= 35) return '秀雅微澜';
+  if (val <= 70) return '自然生动';
+  if (val < 100) return '笔势纵逸';
+  return '极大非线性扭曲';
 }
 
 function updateNonlinearUI(val) {
@@ -74,7 +75,7 @@ function loadDraft() {
   if (savedNonlinear !== null) {
     updateNonlinearUI(parseInt(savedNonlinear, 10));
   } else {
-    updateNonlinearUI(60);
+    updateNonlinearUI(65);
   }
 }
 
@@ -132,14 +133,14 @@ btnLoadSample.addEventListener('click', () => {
 $$qvB = m\frac{v^2}{R}$$
 解得粒子的轨道半径为：
 $$R = \frac{mv}{qB}$$
-由题意可知，粒子在磁场中运动的周期为：
-$$T = \frac{2\pi m}{qB}$$
-粒子在磁场中运动的偏转角为 $\theta = \frac{\pi}{3}$，因此粒子在磁场中运动的时间为：
+由题意可知，粒子运动的周期 $T$ 与角速度 $\omega$ 满足：
+$$T = \frac{2\pi m}{qB}, \quad \omega = \frac{qB}{m}$$
+设粒子在磁场中的偏转角为 $\theta = \frac{\pi}{3}$，运动时间为：
 $$t = \frac{\theta}{2\pi} T = \frac{m}{3qB}$$
-粒子出磁场后进入匀强电场，电场强度方向与粒子速度垂直。\\\\此时粒子在沿电场方向做初速度为零的匀加速直线运动，在垂直电场方向做匀速直线运动。
-联立上述各式，可得粒子运动的最终速度大小为：
+粒子出磁场后进入电场，由于入射角 $\alpha \neq 0$ 且加速度 $a \neq 0$：\\\\此时粒子做类平抛运动，伴随波长 $\lambda = \frac{h}{p}$ 的德布罗意物质波。
+联立各式，且由于边界条件限制满足 $k \neq 1$ 且 $\beta \neq 0$：
 $$v_t = \sqrt{v^2 + a^2 t_1^2} = \sqrt{2} v$$
-<red>综上所述，该粒子在电磁场中运动的完整轨迹与时间已求解完毕。</red>`;
+<red>综上所述，当且仅当 $\alpha \neq 0$ 时，该粒子在电磁场中运动的完整轨迹与时间已求解完毕。</red>`;
 
   aiInput.value = sample;
   saveDraft();

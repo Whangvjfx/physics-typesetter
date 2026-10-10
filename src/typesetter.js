@@ -6,7 +6,7 @@ import renderMathInElement from 'katex/contrib/auto-render';
  * 计算 KaTeX 公式真实的可视包围盒（所有 .base 片段的并集）
  */
 function mathBox(el) {
-  const parts = el.querySelectorAll('.katex-html > .base, .katex-html > .tag');
+  const parts = el.querySelectorAll('.katex-html > .base, .katex-html > .tag, .katex-html > .katex-base');
   if (!parts.length) return null;
   let top = Infinity, left = Infinity, right = -Infinity, bottom = -Infinity;
   parts.forEach(p => {
@@ -151,24 +151,24 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
   let chineseCharSeq = 0;
   let charInClause = 0;
 
-  // 8 套张弛有度、非线性空间投影骨架 (涵盖倒梯形、正梯形、不对称楔形收放)
+  // 8 套张弛有度、非线性空间投影骨架 (涵盖倒梯形、正梯形、不对称楔形收放，大幅强化动态张力)
   const profiles = [
     // 0: 稳正中和态 (基准适中，轻微正向右倾)
-    { sx: 1.00, sy: 1.00, rotX: 1.5, rotY: -1.0, rotZ: 2.2, skew: -1.0, stroke: 0.10, dP: 0.00, pDist: 340, ox: 50, oy: 52 },
-    // 1: 俯势倒梯态 (上宽下收，下笔沉稳，倒梯形透视)
-    { sx: 1.07, sy: 0.94, rotX: 11.0, rotY: -2.5, rotZ: 1.8, skew: -1.8, stroke: 0.22, dP: 0.06, pDist: 240, ox: 52, oy: 65 },
+    { sx: 1.00, sy: 1.00, rotX: 2.0, rotY: -1.5, rotZ: 2.5, skew: -1.0, stroke: 0.10, dP: 0.00, pDist: 280, ox: 50, oy: 50 },
+    // 1: 俯势倒梯态 (上宽下敛，倒梯形透视收窄，下笔沉实)
+    { sx: 1.15, sy: 0.88, rotX: 26.0, rotY: -8.0, rotZ: 2.0, skew: -3.2, stroke: 0.25, dP: 0.08, pDist: 150, ox: 55, oy: 78 },
     // 2: 仰势正梯态 (下盘拓开，上部聚气，正梯形透视)
-    { sx: 0.95, sy: 1.06, rotX: -10.0, rotY: 3.0, rotZ: 3.6, skew: -0.6, stroke: 0.02, dP: -0.04, pDist: 250, ox: 48, oy: 35 },
+    { sx: 0.88, sy: 1.15, rotX: -24.0, rotY: 8.0, rotZ: 5.5, skew: -0.6, stroke: 0.02, dP: -0.05, pDist: 160, ox: 45, oy: 22 },
     // 3: 左欹修长态 (左侧挺拔，右侧微虚，左高右低楔形)
-    { sx: 0.93, sy: 1.05, rotX: -3.0, rotY: -9.0, rotZ: 4.8, skew: -2.4, stroke: 0.05, dP: -0.03, pDist: 260, ox: 38, oy: 50 },
+    { sx: 0.86, sy: 1.16, rotX: -8.0, rotY: -20.0, rotZ: 7.0, skew: -4.0, stroke: 0.04, dP: -0.04, pDist: 170, ox: 28, oy: 50 },
     // 4: 右拓纵逸态 (右肩放开，顺势疾书，右高左低楔形)
-    { sx: 1.04, sy: 0.97, rotX: 4.0, rotY: 8.5, rotZ: 5.2, skew: -2.6, stroke: 0.16, dP: -0.01, pDist: 250, ox: 62, oy: 48 },
+    { sx: 1.16, sy: 0.90, rotX: 12.0, rotY: 19.0, rotZ: 7.5, skew: -4.5, stroke: 0.20, dP: -0.01, pDist: 160, ox: 72, oy: 50 },
     // 5: 凝敛小核态 (内聚紧凑，清秀端方，微左依)
-    { sx: 0.92, sy: 0.93, rotX: -2.0, rotY: -1.5, rotZ: -0.8, skew: -0.5, stroke: 0.08, dP: -0.05, pDist: 320, ox: 50, oy: 48 },
+    { sx: 0.84, sy: 0.86, rotX: -5.0, rotY: -4.0, rotZ: -1.8, skew: -0.5, stroke: 0.08, dP: -0.06, pDist: 260, ox: 50, oy: 42 },
     // 6: 横张雄浑态 (字势宽扁，骨力充沛)
-    { sx: 1.09, sy: 0.92, rotX: 7.0, rotY: -5.0, rotZ: 1.2, skew: -1.5, stroke: 0.20, dP: 0.05, pDist: 270, ox: 53, oy: 58 },
+    { sx: 1.20, sy: 0.84, rotX: 18.0, rotY: -13.0, rotZ: 1.5, skew: -2.8, stroke: 0.24, dP: 0.07, pDist: 180, ox: 58, oy: 70 },
     // 7: 侧峰凌虚态 (斜势取险，体态灵动)
-    { sx: 0.96, sy: 1.02, rotX: -6.0, rotY: 6.0, rotZ: 4.0, skew: -1.2, stroke: 0.12, dP: 0.01, pDist: 280, ox: 45, oy: 42 }
+    { sx: 0.90, sy: 1.12, rotX: -16.0, rotY: 15.0, rotZ: 6.0, skew: -2.2, stroke: 0.14, dP: 0.02, pDist: 190, ox: 38, oy: 32 }
   ];
 
   return {
@@ -190,42 +190,42 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
       // 1. 同字异形轮转 (8套骨架，同字出现时大相径庭)
       const profile = profiles[count % 8];
 
-      // 2. 尺度与长宽比非线性缩放 (受 K 调控)
-      const scaleJitter = 1.0 + (r1 - 0.5) * (0.12 * K);
-      const finalScaleX = (profile.sx * scaleJitter).toFixed(3);
-      const finalScaleY = (profile.sy * scaleJitter).toFixed(3);
+      // 2. 尺度长宽比非线性缩放 (大幅放大，受 K 调控)
+      const scaleJitter = 1.0 + (r1 - 0.5) * (0.24 * K);
+      const finalScaleX = (profile.sx * (1.0 + (profile.sx - 1.0) * K * 0.5) * scaleJitter).toFixed(3);
+      const finalScaleY = (profile.sy * (1.0 + (profile.sy - 1.0) * K * 0.5) * scaleJitter).toFixed(3);
 
-      // 3. 非线性 3D 空间透视逆射参数 (核心创新：生成倒梯形、正梯形、斜切不等边梯形)
-      const rxNoise = (r2 - 0.5) * 5.0 * K;
+      // 3. 3D 空间透视逆射参数 (核心创新：生成倒梯形、正梯形、斜切不等边梯形，K=1 时大幅拉满)
+      const rxNoise = (r2 - 0.5) * 8.0 * K;
       const finalRotX = ((profile.rotX + rxNoise) * K).toFixed(2);
 
-      const ryNoise = (r3 - 0.5) * 4.5 * K;
+      const ryNoise = (r3 - 0.5) * 7.5 * K;
       const finalRotY = ((profile.rotY + ryNoise) * K).toFixed(2);
 
       // 4. 自然右手执笔主轴旋转
-      const rzNoise = (r4 - 0.5) * 3.2 * K;
+      const rzNoise = (r4 - 0.5) * 4.0 * K;
       const finalRotZ = (profile.rotZ + rzNoise).toFixed(2);
 
       // 5. 偏心极点漂移 (支点离开绝对中心)
-      const originX = (profile.ox + (r5 - 0.5) * 16 * K).toFixed(1);
-      const originY = (profile.oy + (r6 - 0.5) * 16 * K).toFixed(1);
+      const originX = (profile.ox + (profile.ox - 50) * K * 0.4 + (r5 - 0.5) * 20 * K).toFixed(1);
+      const originY = (profile.oy + (profile.oy - 50) * K * 0.4 + (r6 - 0.5) * 20 * K).toFixed(1);
 
-      // 6. 透视景深距离 (越近透视变形越明显，越远越接近平面)
-      const pDist = Math.round(profile.pDist - (K - 0.5) * 80 + (r1 - 0.5) * 40);
+      // 6. 透视景深距离 (越小倒梯/正梯畸变越剧烈，K=1 时低至 90px~150px)
+      const pDist = Math.max(90, Math.round(profile.pDist - K * 75 + (r1 - 0.5) * 30));
 
       // 7. 顺势微倾斜
-      const skewNoise = (r3 - 0.5) * 1.0 * K;
+      const skewNoise = (r3 - 0.5) * 1.6 * K;
       const finalSkewX = (profile.skew + skewNoise).toFixed(2);
 
-      // 8. 混沌谐波基线浮动 (长短波耦合，杜绝死板周期正弦)
-      const wave1 = Math.sin(seq * 0.35 + 0.4) * 1.6;
-      const wave2 = Math.sin(Math.pow(seq, 1.22) * 0.18 + 0.9) * 0.8 * K;
-      const microJitter = (r4 - 0.5) * (2.2 * (0.6 + 0.4 * K));
+      // 8. 【基线与字距完全解耦】：无论 K 调多大，基线与字距严格保持在 60px 格线安全区间内！
+      const wave1 = Math.sin(seq * 0.35 + 0.4) * 1.5;
+      const wave2 = Math.sin(Math.pow(seq, 1.18) * 0.18 + 0.9) * 0.6;
+      const microJitter = (r4 - 0.5) * 1.5;
       const deltaY = (wave1 + wave2 + microJitter).toFixed(2);
 
-      // 9. 字距呼吸微调
-      const marginR = ((r1 - 0.42) * (1.6 * (0.5 + 0.5 * K))).toFixed(2);
-      const marginL = ((r2 - 0.5) * (0.8 * (0.5 + 0.5 * K))).toFixed(2);
+      // 9. 字距呼吸微调 (独立解耦，保持自然呼吸)
+      const marginR = ((r1 - 0.42) * 1.4).toFixed(2);
+      const marginL = ((r2 - 0.5) * 0.8).toFixed(2);
 
       // 10. 句子下笔深浅浓淡波动
       const clauseWave = Math.sin((charInClause % 12) / 12 * Math.PI) * 0.10;
@@ -242,8 +242,8 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
       }
 
       // 12. 非线性不对称纸张微洇与毛细渗透效果 (阴影方向根据笔势动态不对称漂移)
-      const shadowDx = ((r5 - 0.5) * 0.35 * K).toFixed(2);
-      const shadowDy = ((r6 - 0.5) * 0.35 * K).toFixed(2);
+      const shadowDx = ((r5 - 0.5) * 0.45 * K).toFixed(2);
+      const shadowDy = ((r6 - 0.5) * 0.45 * K).toFixed(2);
       let shadowCSS = '';
       if (isHighlight) {
         shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px 0.40px rgba(211, 47, 47, 0.52), 0 0 0.80px rgba(211, 47, 47, 0.16);`;
@@ -297,8 +297,84 @@ export async function generateTypesetImages({
     throw new Error('请先粘贴解析文本或上传图片！');
   }
 
-  // 核心功能点：在解析开始前，将所有的数字 1 替换为小写字母 l
-  text = text.replace(/1/g, 'l');
+  // 1. 标准化各种 AI 输出的标红语法变体 (\textcolor{red}{...}, \red{...})
+  text = text
+    .replace(/\\textcolor\{red\}\{([^}]*)\}/g, '<red>$1</red>')
+    .replace(/\\red\{([^}]*)\}/g, '<red>$1</red>');
+
+  // 2. 深度解决 <red> 与数学公式 $...$ / $$...$$ 重叠冲突：
+  // 将公式内部的 <red> 标签提炼提升到公式外部，确保 KaTeX 永远只接收纯净的标准 LaTeX 代码
+  text = text.replace(/(\$\$[\s\S]*?\$\$|\$[^$]*?\$)/g, (formula) => {
+    const isDisplay = formula.startsWith('$$');
+    const delim = isDisplay ? '$$' : '$';
+    const inner = isDisplay ? formula.slice(2, -2) : formula.slice(1, -1);
+
+    if (inner.includes('<red>') || inner.includes('</red>')) {
+      const fullMatch = inner.match(/^\s*<red>([\s\S]*?)<\/red>\s*$/);
+      if (fullMatch) {
+        return `<red>${delim}${fullMatch[1]}${delim}</red>`;
+      }
+      const parts = inner.split(/(<red>[\s\S]*?<\/red>)/g);
+      return parts.map(p => {
+        if (p.startsWith('<red>')) {
+          const redInner = p.slice(5, -6);
+          return `<red>${delim}${redInner}${delim}</red>`;
+        }
+        return p.trim() ? `${delim}${p}${delim}` : '';
+      }).join('');
+    }
+    return formula;
+  });
+
+  // 3. 全面支持在普通文本中直接书写的 LaTeX 数学与希腊符号，转义为 Unicode 字符
+  // 防止在普通文本中书写 \neq, \alpha 时被当成换行符或损坏
+  const plainTextSymbolMap = [
+    [/\\neq\b/g, '≠'],
+    [/\\ne\b/g, '≠'],
+    [/\\leq\b/g, '≤'],
+    [/\\le\b/g, '≤'],
+    [/\\geq\b/g, '≥'],
+    [/\\ge\b/g, '≥'],
+    [/\\pm\b/g, '±'],
+    [/\\mp\b/g, '∓'],
+    [/\\times\b/g, '×'],
+    [/\\div\b/g, '÷'],
+    [/\\approx\b/g, '≈'],
+    [/\\sim\b/g, '∼'],
+    [/\\propto\b/g, '∝'],
+    [/\\infty\b/g, '∞'],
+    [/\\degree\b/g, '°'],
+    [/\\circ\b/g, '°'],
+    [/\\alpha\b/g, 'α'],
+    [/\\beta\b/g, 'β'],
+    [/\\gamma\b/g, 'γ'],
+    [/\\delta\b/g, 'δ'],
+    [/\\theta\b/g, 'θ'],
+    [/\\lambda\b/g, 'λ'],
+    [/\\mu\b/g, 'μ'],
+    [/\\pi\b/g, 'π'],
+    [/\\rho\b/g, 'ρ'],
+    [/\\sigma\b/g, 'σ'],
+    [/\\tau\b/g, 'τ'],
+    [/\\phi\b/g, 'ϕ'],
+    [/\\omega\b/g, 'ω'],
+    [/\\Delta\b/g, 'Δ'],
+    [/\\Omega\b/g, 'Ω']
+  ];
+
+  let mathParts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]*?\$)/g);
+  for (let i = 0; i < mathParts.length; i++) {
+    if (!mathParts[i].startsWith('$')) {
+      for (const [reg, sym] of plainTextSymbolMap) {
+        mathParts[i] = mathParts[i].replace(reg, sym);
+      }
+      mathParts[i] = mathParts[i].replace(/\\\\/g, '【MANUAL_BR】').replace(/\\/g, '【MANUAL_BR】');
+    }
+  }
+  let safeText = mathParts.join('');
+
+  // 4. 数字 1 转小写字母 l (遵循原项目设定)
+  safeText = safeText.replace(/1/g, 'l');
 
   onProgress({ stage: 'preprocessing', message: '正在进行文本预处理与拟真分词...' });
   await new Promise(r => setTimeout(r, 60));
@@ -313,14 +389,6 @@ export async function generateTypesetImages({
 
   const masterBox = document.createElement('div');
   masterBox.id = 'master-box';
-
-  let parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]*?\$)/g);
-  for (let i = 0; i < parts.length; i++) {
-    if (!parts[i].startsWith('$')) {
-      parts[i] = parts[i].replace(/\\/g, '【MANUAL_BR】');
-    }
-  }
-  let safeText = parts.join('');
 
   let periodCount = 0;
   let htmlText = safeText
@@ -370,9 +438,12 @@ export async function generateTypesetImages({
         if (/[\u4e00-\u9fa5]/.test(char)) {
           // 【核心】：仅汉字应用拟真手写扰动（基线浮动、倾斜、大小微差、字距松紧、同字异构、微洇）
           randomizedText += organicEngine.formatChar(char, isHighlight);
+        } else if (/[≠≤≥≈±×÷∝∞°′″∠△⊥∈∑∫√~]/.test(char)) {
+          // 【核心】：物理数学运算符与特殊符号，保留原生符号字体渲染
+          randomizedText += `<span class="f1 math-sym" style="font-family:'KaTeX_Main', 'Caveat', 'HandwritingGreek', 'MyHandwriting', sans-serif; font-size:1.35em; line-height:21px !important; vertical-align:baseline; color:inherit;">${char}</span>`;
         } else {
-          // 【核心】：非汉字（英文字母、数字、西文标点）严格沿用原方法不变！
-          randomizedText += `<span class="f1" style="font-size: 1.35em; line-height: 21px !important;">${char}</span>`;
+          // 【核心】：非汉字（希腊字母、英文字母、数字、西文标点）无缝调用 Caveat + HandwritingGreek 手写体
+          randomizedText += `<span class="f1" style="font-family:'Caveat', 'HandwritingGreek', 'MyHandwriting', sans-serif; font-size:1.35em; line-height:21px !important; color:inherit;">${char}</span>`;
         }
       }
     }

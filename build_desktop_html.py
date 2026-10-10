@@ -14,7 +14,7 @@ def generate():
     content = content.replace("📐 A4手写", "🌀 非线性")
     content = content.replace("【真手写V2副本已激活】", "【非线性动力学引擎已就绪】")
 
-    # 2. Add Greek @font-face rules
+    # 2. Add Greek @font-face rules & Nonlinear CSS
     greek_font_faces = """
 @font-face {
   font-family: 'HandwritingGreek';
@@ -55,11 +55,7 @@ def generate():
   font-display: swap;
   unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F;
 }
-"""
-    content = content.replace("/* 基础变量 */", greek_font_faces + "\n/* 基础变量 */")
 
-    # 3. Add Nonlinear Deck CSS Styles
-    nonlinear_css = """
 /* 非线性专属滑块外观与预设按钮 */
 .nonlinear-deck {
   border-left: 3px solid var(--amber-gold) !important;
@@ -196,19 +192,13 @@ span.f1.math-sym {
   color: #d32f2f !important;
 }
 """
-    content = content.replace("/* 基础变量 */", nonlinear_css + "\n/* 基础变量 */")
+    myfont_idx = content.find("font-family: 'MyHandwriting'")
+    if myfont_idx != -1:
+        close_brace = content.find('}', myfont_idx) + 1
+        content = content[:close_brace] + "\n" + greek_font_faces + "\n" + content[close_brace:]
 
-    # 4. Add Slider HTML into Control Deck
-    slider_target = """        <!-- 图片大小调节滑块 -->
-        <div class="slider-deck">
-          <div class="slider-deck-header">
-            <span>图片渲染宽度</span>
-            <span class="slider-deck-value" id="img-scale-val">250 px</span>
-          </div>
-          <input type="range" id="img-scale" min="100" max="400" step="5" value="250">
-        </div>"""
-
-    slider_replacement = slider_target + """
+    # 3. Add Slider HTML into Control Deck
+    slider_html = """
 
         <!-- 🌀 核心特性：非线性随机度调节滑块 -->
         <div class="slider-deck nonlinear-deck">
@@ -228,15 +218,18 @@ span.f1.math-sym {
           </div>
         </div>"""
 
-    content = content.replace(slider_target, slider_replacement)
+    scale_idx = content.find('id="img-scale"')
+    if scale_idx != -1:
+        slider_div_close = content.find('</div>', scale_idx) + 6
+        content = content[:slider_div_close] + slider_html + content[slider_div_close:]
 
-    # 5. Fix mathBox selector in desktop HTML
+    # 4. Fix mathBox selector in desktop HTML
     content = content.replace(
         "const parts = el.querySelectorAll('.katex-html > .base, .katex-html > .tag');",
         "const parts = el.querySelectorAll('.katex-html > .base, .katex-html > .tag, .katex-html > .katex-base');"
     )
 
-    # 6. Read typesetter.js functions to replace in desktop HTML
+    # 5. Read typesetter.js functions to replace in desktop HTML
     with open(r"C:\Users\wb686\.gemini\antigravity\scratch\physics-typesetter-nonlinear\src\typesetter.js", 'r', encoding='utf-8') as f:
         ts_code = f.read()
 
@@ -250,18 +243,16 @@ span.f1.math-sym {
     old_g_end = content.find("async function generateTypesetImages")
     content = content[:old_g_start] + gen_func_code + "\n\n" + content[old_g_end:]
 
-    # 7. Replace generateTypesetImages implementation in desktop HTML
-    # We find generateTypesetImages in ts_code
+    # 6. Replace generateTypesetImages implementation in desktop HTML
     ts_gen_start = ts_code.find("export async function generateTypesetImages")
     ts_gen_end = ts_code.find("const masterRect = masterBox.getBoundingClientRect();")
     ts_gen_segment = ts_code[ts_gen_start:ts_gen_end].replace("export async function generateTypesetImages", "async function generateTypesetImages")
 
-    # In desktop content, find generateTypesetImages up to masterRect
     desk_gen_start = content.find("async function generateTypesetImages")
     desk_gen_end = content.find("const masterRect = masterBox.getBoundingClientRect();")
     content = content[:desk_gen_start] + ts_gen_segment + content[desk_gen_end:]
 
-    # 8. Add JS Slider Hooks & Sample Text
+    # 7. Add JS Slider Hooks & Sample Text
     js_slider_hook = """
 // 非线性状态管理与 UI
 let nonlinearVal = 65;
@@ -350,7 +341,6 @@ $$t = \\\\frac{\\\\theta}{2\\\\pi} T = \\\\frac{m}{3qB}$$
 $$v_t = \\\\sqrt{v^2 + a^2 t_1^2} = \\\\sqrt{2} v$$
 <red>综上所述，当且仅当 $\\\\alpha \\\\neq 0$ 时，该粒子在电磁场中运动的完整轨迹与时间已求解完毕。</red>`;"""
 
-    # Find the btnLoadSample in desktop content
     btn_sample_pos = content.find("btnLoadSample.addEventListener('click'")
     if btn_sample_pos != -1:
         sample_start = content.find("const sample = `", btn_sample_pos)

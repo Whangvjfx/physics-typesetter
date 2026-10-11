@@ -415,29 +415,10 @@ presetBtns.forEach(btn => {
         "imageWidth,\n      nonlinearIntensity: nonlinearVal / 100,"
     )
 
-    # Update sample text in desktop HTML to include Greek, tan, sqrt, subscripts, degree, neq & red
-    sample_replacement = """  const sample = `【答案】
-见解析
-
-【解析】
-带电粒子在匀强电磁场中运动，所受电场力与重力的合力提供向心力：
-$$F_合 = \\\\sqrt{(mg)^2 + (qE)^2} = 20\\\\,\\\\text{N}$$
-由牛顿第二定律，在轨道最低点 $B$ 处，轨道支持力 $F_N$ 满足：
-$$F_N - mg = m\\\\frac{v_B^2}{R}$$
-由动能定理，从最高点运动到最低点过程中，合外力做功 $W_合$ 为：
-$$W_合 = W_G + W_E = \\\\frac{1}{2}mv_B^2 - 0$$
-已知偏转角满足 $\\\\tan \\\\alpha = \\\\frac{\\\\sqrt{3}}{3}$，即入射角 $\\\\alpha = 30^\\\\circ$。
-粒子在磁场中做匀速圆周运动，其周期 $T$ 与角速度 $\\\\omega$ 满足：
-$$T = \\\\frac{2\\\\pi m}{qB}, \\\\quad \\\\omega = \\\\frac{qB}{m}$$
-由于边界条件限制，粒子入射速度满足 $v_0 \\\\neq 0$ 且加速度 $a \\\\neq 0$：
-$$v_t = \\\\sqrt{v_0^2 + 2as} = \\\\sqrt{2} v_0$$
-<red>综上所述，当且仅当 $\\\\alpha \\\\neq 0$ 且 $k \\\\neq 1$ 时，粒子的各项物理量均已求解完毕。</red>`;"""
-
-    btn_sample_pos = content.find("btnLoadSample.addEventListener('click'")
-    if btn_sample_pos != -1:
-        sample_start = content.find("const sample = `", btn_sample_pos)
-        sample_end = content.find("`;", sample_start) + 2
-        content = content[:sample_start] + sample_replacement + content[sample_end:]
+    # 8. 移除“填入示例”按钮及监听
+    content = re.sub(r'<button[^>]*id="btn-load-sample"[^>]*>.*?</button>', '', content, flags=re.DOTALL)
+    content = re.sub(r'btnLoadSample\.addEventListener\(\'click\',.*?\}\);', '', content, flags=re.DOTALL)
+    content = content.replace("const btnLoadSample = document.getElementById('btn-load-sample');", "")
 
     os.makedirs(os.path.dirname(dest_html), exist_ok=True)
     with open(dest_html, 'w', encoding='utf-8') as f:

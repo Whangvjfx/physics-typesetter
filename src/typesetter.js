@@ -187,105 +187,173 @@ function hash32(a, b, c, d) {
  * 5. 全动态可调参数 (nonlinearIntensity):
  *    0.0 (完全平正无透视形变) ~ 1.0 (极富张力的非线性书法态)，默认 0.60。
  */
+/**
+ * 汉字专属：物理运笔惯性与连续流形非线性动力学真手写形变引擎 (Kinematic Inertia Nonlinear Chinese Handwriting Engine)
+ * 仅对汉字生效，公式、英文字母、数字和标点完全保持原样不变。
+ * 
+ * 核心创新与物理约束：
+ * 1. 物理运笔惯性与平滑连续流场 (Continuous Kinematic Flow):
+ *    人在书写时，手腕的肌肉状态、手指伸缩与笔尖倾角具备物理动量，
+ *    相邻字的变化由多频宏观连续波 (波长约 12~24 字) 驱动，并经过一阶惯性阻尼滤波 (Exponential Momentum Smoothing)
+ *    和单步最大速率限制器 (Slew Rate Limiter)，绝对杜绝“相邻两字一个巨大一个极小、或一个矮胖一个瘦长”的突兀跳变！
+ * 
+ * 2. 宏观多字形态显著演化 (Significant Multi-Character Progression):
+ *    在保证相邻字平滑渐变的前提下，随书写序列流动推进 3~5 字，整体形态在尺寸、宽扁/挺秀、
+ *    3D 空间透视（正梯形/倒梯形/斜切梯形）及倾斜度上展开明显且富有张力的书法演化。
+ * 
+ * 3. 叠字与重字书法异构呼应 (Homomorphic Repetition Decoupling):
+ *    当相同字符连续出现或重现时，注入平滑的互补笔势相移，打破千篇一律，但视觉体量依然与上下文连续协调。
+ * 
+ * 4. 视觉面积守恒伸缩 (Equal-Area Aspect Stretching):
+ *    采用 scaleX = size * sqrt(aspect), scaleY = size / sqrt(aspect)，
+ *    在改变宽扁/修长的同时保持字形视觉面积守恒，杜绝因变形引起的忽大忽小感。
+ * 
+ * 5. 全动态可调参数 (nonlinearIntensity):
+ *    0.0 (完全平正无透视形变) ~ 1.0 (极富张力的非线性书法态)，默认 0.60。
+ */
 function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
   const K = Math.max(0.0, Math.min(1.0, Number(nonlinearIntensity) ?? 0.60));
   const charOccurMap = new Map();
   let chineseCharSeq = 0;
   let charInClause = 0;
+  let prevChar = '';
 
-  // 8 套张弛有度、非线性空间投影骨架 (涵盖倒梯形、正梯形、不对称楔形收放，大幅强化动态张力)
-  const profiles = [
-    // 0: 稳正中和态 (基准适中，轻微正向右倾)
-    { sx: 1.00, sy: 1.00, rotX: 2.0, rotY: -1.5, rotZ: 2.5, skew: -1.0, stroke: 0.10, dP: 0.00, pDist: 280, ox: 50, oy: 50 },
-    // 1: 俯势倒梯态 (上宽下敛，倒梯形透视收窄，下笔沉实)
-    { sx: 1.15, sy: 0.88, rotX: 26.0, rotY: -8.0, rotZ: 2.0, skew: -3.2, stroke: 0.25, dP: 0.08, pDist: 150, ox: 55, oy: 78 },
-    // 2: 仰势正梯态 (下盘拓开，上部聚气，正梯形透视)
-    { sx: 0.88, sy: 1.15, rotX: -24.0, rotY: 8.0, rotZ: 5.5, skew: -0.6, stroke: 0.02, dP: -0.05, pDist: 160, ox: 45, oy: 22 },
-    // 3: 左欹修长态 (左侧挺拔，右侧微虚，左高右低楔形)
-    { sx: 0.86, sy: 1.16, rotX: -8.0, rotY: -20.0, rotZ: 7.0, skew: -4.0, stroke: 0.04, dP: -0.04, pDist: 170, ox: 28, oy: 50 },
-    // 4: 右拓纵逸态 (右肩放开，顺势疾书，右高左低楔形)
-    { sx: 1.16, sy: 0.90, rotX: 12.0, rotY: 19.0, rotZ: 7.5, skew: -4.5, stroke: 0.20, dP: -0.01, pDist: 160, ox: 72, oy: 50 },
-    // 5: 凝敛小核态 (内聚紧凑，清秀端方，微左依)
-    { sx: 0.84, sy: 0.86, rotX: -5.0, rotY: -4.0, rotZ: -1.8, skew: -0.5, stroke: 0.08, dP: -0.06, pDist: 260, ox: 50, oy: 42 },
-    // 6: 横张雄浑态 (字势宽扁，骨力充沛)
-    { sx: 1.20, sy: 0.84, rotX: 18.0, rotY: -13.0, rotZ: 1.5, skew: -2.8, stroke: 0.24, dP: 0.07, pDist: 180, ox: 58, oy: 70 },
-    // 7: 侧峰凌虚态 (斜势取险，体态灵动)
-    { sx: 0.90, sy: 1.12, rotX: -16.0, rotY: 15.0, rotZ: 6.0, skew: -2.2, stroke: 0.14, dP: 0.02, pDist: 190, ox: 38, oy: 32 }
-  ];
+  // 物理惯性运笔连续状态机
+  let state = {
+    size: 1.0,
+    aspect: 1.0,    // >1 略宽展，<1 略挺秀
+    rotX: 2.0,      // 3D 俯仰透视 (倒梯形/正梯形)
+    rotY: -1.5,     // 3D 偏转透视 (左窄右展/右窄左展)
+    rotZ: 2.5,      // 右手主轴自然倾斜
+    skew: -1.2,     // 顺势剪切
+    ox: 50.0,       // 偏心支点 X
+    oy: 50.0,       // 偏心支点 Y
+    pDist: 220,     // 透视景深
+    pressure: 0.94  // 下笔力度
+  };
+
+  const clampDelta = (curr, prev, limit) => {
+    const d = curr - prev;
+    if (Math.abs(d) > limit) {
+      return prev + Math.sign(d) * limit;
+    }
+    return curr;
+  };
 
   return {
-    resetClause: () => { charInClause = 0; },
+    resetClause: () => {
+      charInClause = 0;
+    },
     formatChar: (char, isHighlight = false) => {
       const count = charOccurMap.get(char) || 0;
       charOccurMap.set(char, count + 1);
       const seq = chineseCharSeq++;
       charInClause++;
 
-      const charCode = char.charCodeAt(0);
-      const r1 = hash32(charCode, seq, count, 101);
-      const r2 = hash32(charCode, seq, count, 203);
-      const r3 = hash32(charCode, seq, count, 307);
-      const r4 = hash32(charCode, seq, count, 409);
-      const r5 = hash32(charCode, seq, count, 521);
-      const r6 = hash32(charCode, seq, count, 631);
+      // 1. 多频宏观低频波：驱动字势在句子与段落中的舒卷流动 (周期 12 ~ 26 字，超平滑导数有界)
+      const waveSize = Math.sin(seq * 0.28 + 0.7) * 0.70 + Math.sin(seq * 0.11 + 2.1) * 0.30;
+      let targetSize = 1.0 + waveSize * (0.16 * K);
 
-      // 1. 同字异形轮转 (8套骨架，同字出现时大相径庭)
-      const profile = profiles[count % 8];
+      const waveAspect = Math.cos(seq * 0.24 + 1.4) * 0.65 + Math.sin(seq * 0.09 + 0.5) * 0.35;
+      let targetAspect = 1.0 + waveAspect * (0.22 * K);
 
-      // 2. 尺度长宽比非线性缩放 (大幅放大，受 K 调控)
-      const scaleJitter = 1.0 + (r1 - 0.5) * (0.24 * K);
-      const finalScaleX = (profile.sx * (1.0 + (profile.sx - 1.0) * K * 0.5) * scaleJitter).toFixed(3);
-      const finalScaleY = (profile.sy * (1.0 + (profile.sy - 1.0) * K * 0.5) * scaleJitter).toFixed(3);
+      const waveRotX = Math.sin(seq * 0.22 + 1.8);
+      let targetRotX = waveRotX * (24.0 * K);
 
-      // 3. 3D 空间透视逆射参数 (核心创新：生成倒梯形、正梯形、斜切不等边梯形，K=1 时大幅拉满)
-      const rxNoise = (r2 - 0.5) * 8.0 * K;
-      const finalRotX = ((profile.rotX + rxNoise) * K).toFixed(2);
+      const waveRotY = Math.cos(seq * 0.19 + 0.8);
+      let targetRotY = waveRotY * (18.0 * K);
 
-      const ryNoise = (r3 - 0.5) * 7.5 * K;
-      const finalRotY = ((profile.rotY + ryNoise) * K).toFixed(2);
+      const waveRotZ = Math.sin(seq * 0.26 + 0.4);
+      let targetRotZ = 2.8 + waveRotZ * (3.8 * K);
 
-      // 4. 自然右手执笔主轴旋转
-      const rzNoise = (r4 - 0.5) * 4.0 * K;
-      const finalRotZ = (profile.rotZ + rzNoise).toFixed(2);
+      const waveSkew = Math.cos(seq * 0.23 + 1.5);
+      let targetSkew = -1.5 + waveSkew * (2.2 * K);
 
-      // 5. 偏心极点漂移 (支点离开绝对中心)
-      const originX = (profile.ox + (profile.ox - 50) * K * 0.4 + (r5 - 0.5) * 20 * K).toFixed(1);
-      const originY = (profile.oy + (profile.oy - 50) * K * 0.4 + (r6 - 0.5) * 20 * K).toFixed(1);
+      let targetOx = 50 + Math.cos(seq * 0.21 + 1.2) * (18 * K);
+      let targetOy = 50 + Math.sin(seq * 0.17 + 2.4) * (20 * K);
+      let targetPDist = Math.max(90, Math.round(220 - K * 95 + Math.sin(seq * 0.25) * (25 * K)));
 
-      // 6. 透视景深距离 (越小倒梯/正梯畸变越剧烈，K=1 时低至 90px~150px)
-      const pDist = Math.max(90, Math.round(profile.pDist - K * 75 + (r1 - 0.5) * 30));
+      // 句子呼吸起伏力道 (前半句渐沉，后半句微提)
+      const clauseWave = Math.sin((charInClause % 14) / 14 * Math.PI) * 0.08;
+      let targetPressure = 0.93 + clauseWave + Math.sin(seq * 0.18) * (0.06 * K);
 
-      // 7. 顺势微倾斜
-      const skewNoise = (r3 - 0.5) * 1.6 * K;
-      const finalSkewX = (profile.skew + skewNoise).toFixed(2);
+      // 2. 【叠字与重字书法异构呼应】若紧邻相同字或相近重现，注入互补反相偏移，但受平滑容差约束
+      const isRepeat = (char === prevChar) || (count > 0);
+      if (isRepeat) {
+        // 偏向相反的 3D 梯形俯仰态（如前字偏俯势，当前字微仰势，相映成趣）
+        targetRotX = -targetRotX * 0.75;
+        targetRotY = -targetRotY * 0.75;
+        // 宽扁与修长互补转化
+        targetAspect = 1.0 - (targetAspect - 1.0) * 0.80;
+        // 支点互补漂移
+        targetOx = 100 - targetOx;
+        targetOy = 100 - targetOy;
+        // 尺寸微调（幅度严格限制在 0.03 以内）
+        targetSize += (count % 2 === 1 ? 0.03 : -0.03) * K;
+      }
 
-      // 8. 【基线与字距完全解耦】：无论 K 调多大，基线与字距严格保持在 60px 格线安全区间内！
-      const wave1 = Math.sin(seq * 0.35 + 0.4) * 1.5;
-      const wave2 = Math.sin(Math.pow(seq, 1.18) * 0.18 + 0.9) * 0.6;
-      const microJitter = (r4 - 0.5) * 1.5;
-      const deltaY = (wave1 + wave2 + microJitter).toFixed(2);
+      // 3. 【一阶惯性动量阻尼更新】(Physical Inertia Damper)
+      const alpha = 0.72; // 0.72 保留前字惯性，0.28 渐进响应新目标
+      const rawSize = state.size * alpha + targetSize * (1 - alpha);
+      const rawAspect = state.aspect * alpha + targetAspect * (1 - alpha);
+      const rawRotX = state.rotX * alpha + targetRotX * (1 - alpha);
+      const rawRotY = state.rotY * alpha + targetRotY * (1 - alpha);
+      const rawRotZ = state.rotZ * alpha + targetRotZ * (1 - alpha);
+      const rawSkew = state.skew * alpha + targetSkew * (1 - alpha);
+      const rawOx = state.ox * alpha + targetOx * (1 - alpha);
+      const rawOy = state.oy * alpha + targetOy * (1 - alpha);
+      const rawPDist = state.pDist * alpha + targetPDist * (1 - alpha);
+      const rawPressure = state.pressure * alpha + targetPressure * (1 - alpha);
 
-      // 9. 字距呼吸微调 (独立解耦，保持自然呼吸)
-      const marginR = ((r1 - 0.42) * 1.4).toFixed(2);
-      const marginL = ((r2 - 0.5) * 0.8).toFixed(2);
+      // 4. 【单步最大速率限制器】(Slew Rate Clamp: 严格截断相邻两字的最大突变率)
+      state.size = clampDelta(rawSize, state.size, 0.024 + 0.012 * K);
+      state.aspect = clampDelta(rawAspect, state.aspect, 0.030 + 0.015 * K);
+      state.rotX = clampDelta(rawRotX, state.rotX, 1.8 + 1.2 * K);
+      state.rotY = clampDelta(rawRotY, state.rotY, 1.4 + 1.0 * K);
+      state.rotZ = clampDelta(rawRotZ, state.rotZ, 0.9 + 0.6 * K);
+      state.skew = clampDelta(rawSkew, state.skew, 0.6 + 0.4 * K);
+      state.ox = clampDelta(rawOx, state.ox, 2.4 + 1.6 * K);
+      state.oy = clampDelta(rawOy, state.oy, 2.4 + 1.6 * K);
+      state.pDist = clampDelta(rawPDist, state.pDist, 10 + 10 * K);
+      state.pressure = Math.max(0.82, Math.min(1.05, clampDelta(rawPressure, state.pressure, 0.03)));
 
-      // 10. 句子下笔深浅浓淡波动
-      const clauseWave = Math.sin((charInClause % 12) / 12 * Math.PI) * 0.10;
-      let pressure = 0.92 + profile.dP * K + clauseWave + (r3 - 0.5) * 0.08 * K;
-      pressure = Math.max(0.82, Math.min(1.05, pressure));
+      prevChar = char;
 
-      const opacity = Math.min(1.0, 0.86 + pressure * 0.14).toFixed(2);
+      // 5. 【视觉面积守恒伸缩计算】：
+      // scaleX = size * sqrt(aspect), scaleY = size / sqrt(aspect)
+      // 保证字形在宽扁与挺拔变换时视觉量感守恒，杜绝骤然暴增或骤然缩水！
+      const sqrtA = Math.sqrt(state.aspect);
+      const finalScaleX = (state.size * sqrtA).toFixed(3);
+      const finalScaleY = (state.size / sqrtA).toFixed(3);
 
-      // 11. 笔画轮廓粗细微调
+      const finalRotX = state.rotX.toFixed(2);
+      const finalRotY = state.rotY.toFixed(2);
+      const finalRotZ = state.rotZ.toFixed(2);
+      const finalSkewX = state.skew.toFixed(2);
+      const originX = state.ox.toFixed(1);
+      const originY = state.oy.toFixed(1);
+      const pDist = Math.round(state.pDist);
+
+      // 6. 【基线与字距完全解耦】：无论 K 调多大，严格保持在 60px 格线安全区间内！
+      const wave1 = Math.sin(seq * 0.35 + 0.4) * 1.2;
+      const wave2 = Math.sin(Math.pow(seq, 1.15) * 0.16 + 0.9) * 0.5;
+      const deltaY = (wave1 + wave2).toFixed(2);
+
+      // 7. 字距呼吸微调 (连续平滑演进)
+      const marginR = (Math.sin(seq * 0.4 + 0.2) * (0.8 + 0.6 * K)).toFixed(2);
+      const marginL = (Math.cos(seq * 0.4 + 0.8) * (0.4 + 0.4 * K)).toFixed(2);
+
+      // 8. 笔墨深浅浓淡与渗透 (受 state.pressure 平滑驱动)
+      const opacity = Math.min(1.0, 0.86 + state.pressure * 0.14).toFixed(2);
+
       let strokeCSS = '';
-      const currentStroke = profile.stroke * (0.5 + 0.5 * K);
+      const currentStroke = (0.04 + (state.pressure - 0.90) * 0.15) * (0.5 + 0.5 * K);
       if (currentStroke > 0.02) {
         strokeCSS = `-webkit-text-stroke: ${currentStroke.toFixed(2)}px currentColor;`;
       }
 
-      // 12. 非线性不对称纸张微洇与毛细渗透效果 (阴影方向根据笔势动态不对称漂移)
-      const shadowDx = ((r5 - 0.5) * 0.45 * K).toFixed(2);
-      const shadowDy = ((r6 - 0.5) * 0.45 * K).toFixed(2);
+      const shadowDx = (Math.sin(seq * 0.3) * 0.25 * K).toFixed(2);
+      const shadowDy = (Math.cos(seq * 0.3) * 0.25 * K).toFixed(2);
       let shadowCSS = '';
       if (isHighlight) {
         shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px 0.40px rgba(211, 47, 47, 0.52), 0 0 0.80px rgba(211, 47, 47, 0.16);`;
@@ -293,21 +361,19 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
         shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px 0.40px rgba(18, 20, 24, 0.45), 0 0 0.80px rgba(18, 20, 24, 0.14);`;
       }
 
-      // 墨色深浅浓淡 (深黑至润墨自然过渡)
       let colorCSS = '';
       if (isHighlight) {
-        const redR = Math.round(195 + (1.05 - pressure) * 28);
-        const redG = Math.round(35 + (1.05 - pressure) * 22);
-        const redB = Math.round(35 + (1.05 - pressure) * 22);
+        const redR = Math.round(195 + (1.05 - state.pressure) * 28);
+        const redG = Math.round(35 + (1.05 - state.pressure) * 22);
+        const redB = Math.round(35 + (1.05 - state.pressure) * 22);
         colorCSS = `color: rgb(${redR}, ${redG}, ${redB}) !important;`;
       } else {
-        const gray = Math.round(14 + (1.05 - pressure) * 26);
+        const gray = Math.round(14 + (1.05 - state.pressure) * 26);
         colorCSS = `color: rgb(${gray}, ${gray + 2}, ${gray + 5}) !important;`;
       }
 
-      // 核心：若 K > 0.05 则引入 perspective 3D 透视逆射非线性形变，若 K 近似 0 则平正退化
       let transform;
-      let originCSS = `transform-origin: ${originX}% ${originY}%;`;
+      const originCSS = `transform-origin: ${originX}% ${originY}%;`;
       if (K > 0.05) {
         transform = `transform: perspective(${pDist}px) rotateX(${finalRotX}deg) rotateY(${finalRotY}deg) rotateZ(${finalRotZ}deg) translateY(${deltaY}px) scale(${finalScaleX}, ${finalScaleY}) skewX(${finalSkewX}deg);`;
       } else {

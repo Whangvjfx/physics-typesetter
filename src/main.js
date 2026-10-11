@@ -24,7 +24,6 @@ const nonlinearTierBadge = document.getElementById('nonlinear-tier-badge');
 const presetBtns = document.querySelectorAll('.preset-btn');
 const btnInsertBackslash = document.getElementById('btn-insert-backslash');
 const btnPasteText = document.getElementById('btn-paste-text');
-const btnLoadSample = document.getElementById('btn-load-sample');
 const btnClearAll = document.getElementById('btn-clear-all');
 const genBtn = document.getElementById('gen-btn');
 const outputContainer = document.getElementById('output-container');
@@ -121,30 +120,6 @@ btnPasteText.addEventListener('click', async () => {
   } else {
     showToast('未能获取剪贴板内容，请手动长按粘贴');
   }
-});
-
-btnLoadSample.addEventListener('click', () => {
-  triggerHaptic('light');
-  const sample = `【答案】
-见解析
-
-【解析】
-带电粒子在匀强磁场中做匀速圆周运动，其洛伦兹力提供向心力：
-$$qvB = m\frac{v^2}{R}$$
-解得粒子的轨道半径为：
-$$R = \frac{mv}{qB}$$
-由题意可知，粒子运动的周期 $T$ 与角速度 $\omega$ 满足：
-$$T = \frac{2\pi m}{qB}, \quad \omega = \frac{qB}{m}$$
-设粒子在磁场中的偏转角为 $\theta = \frac{\pi}{3}$，运动时间为：
-$$t = \frac{\theta}{2\pi} T = \frac{m}{3qB}$$
-粒子出磁场后进入电场，由于入射角 $\alpha \neq 0$ 且加速度 $a \neq 0$：\\\\此时粒子做类平抛运动，伴随波长 $\lambda = \frac{h}{p}$ 的德布罗意物质波。
-联立各式，且由于边界条件限制满足 $k \neq 1$ 且 $\beta \neq 0$：
-$$v_t = \sqrt{v^2 + a^2 t_1^2} = \sqrt{2} v$$
-<red>综上所述，当且仅当 $\alpha \neq 0$ 时，该粒子在电磁场中运动的完整轨迹与时间已求解完毕。</red>`;
-
-  aiInput.value = sample;
-  saveDraft();
-  showToast('已加载物理示例数据');
 });
 
 btnClearAll.addEventListener('click', () => {

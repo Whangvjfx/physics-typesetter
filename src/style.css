@@ -1037,14 +1037,15 @@ span.f1 {
   color: inherit;
 }
 
-/* 物理数学特定运算符与符号（如 ≠, ≤, ≥, ±, ×, ÷, ≈ 等）：优先采用 KaTeX 标准符号字体，防止手写字体缺少符号定义 */
+/* 物理数学特定运算符与符号（如 ≠, ≤, ≥, ±, ×, ÷, ≈ 等）：优先采用手写字体，没有的再 fallback 原生符号字体 */
 span.f1.math-sym {
-  font-family: 'KaTeX_Main', 'HandwritingGreek', 'MyHandwriting', sans-serif !important;
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', 'KaTeX_Main', sans-serif !important;
   color: inherit;
 }
 
 /* KaTeX 基础容器样式 */
 .katex {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
   font-size: 1.25em !important;
   color: inherit;
 }
@@ -1054,15 +1055,98 @@ span.f1.math-sym {
   line-height: normal !important;
 }
 
-/* 仅对公式中的变量、常数与斜体字母应用手写字体（包含拉丁手写与希腊手写），保留运算符、关系符（如 ≠、=、+ 等）的原生符号字体 */
+/* 1. 公式中的变量、常数与斜体字母应用手写字体（包含拉丁手写与希腊手写） */
 .katex .mathnormal,
 .katex .mord.mathnormal {
   font-family: 'Caveat', 'HandwritingGreek', cursive !important;
 }
 
-/* 公式中普通正体字母或大写希腊字母（如 \Delta, \Omega 等）也享受手写体 */
-.katex .mord {
-  font-family: 'Caveat', 'HandwritingGreek', 'KaTeX_Main', cursive;
+/* 2. 【核心修复】数学算子与函数名（tan, sin, cos, ln, log, lim, max, min, exp, cot 等）手写化 */
+.katex .mop,
+.katex .mop * {
+  font-family: 'Caveat', 'HandwritingGreek', cursive !important;
+  font-size: 1.12em !important;
+  font-style: normal !important;
+}
+
+/* 3. 【核心修复】所有上下标与根指数（包括幂次 ^2, 下标 _B, _C, _N, _G, _E, _m, 中文下标 _合, 根号指数 \sqrt[3]{} 等）全量手写化 */
+.katex .msupsub,
+.katex .msupsub *,
+.katex .mtight,
+.katex .mtight *,
+.katex .katex-root,
+.katex .katex-root * {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', "KaiTi", cursive !important;
+}
+
+/* 4. 【核心修复】公式中普通数字、数值、常数与量纲单位（如 20 N, 10 N, 5 J, 30°, 分数 1/2, 根号下数值等）手写化 */
+.katex .mord:not(.katex-vbox):not(.katex-vbox *):not(.svg-align):not(.hide-tail):not(.hide-tail *):not(.sqrt) {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+}
+
+/* 5. 【核心修复】公式中出现的中文汉字（如 W_合, F_拉, \text{总功} 等）严格应用手写字体 */
+.katex .cjk_fallback,
+.katex .cjk_fallback * {
+  font-family: 'MyHandwriting', 'KaiTi', cursive !important;
+}
+
+/* 6. 【核心修复】正体字母与量纲单位（N, J, kg, s, C, V, m 等）手写化 */
+.katex .mathrm,
+.katex .mathrm *,
+.katex .text,
+.katex .text * {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+  font-style: normal !important;
+}
+
+/* 7. 【核心修复】关系符（等号 =、大于 >、小于 <、约等于 ≈、小于等于 ≤、大于等于 ≥ 等）全量手写化 */
+.katex .mrel:not(.katex-vbox *) {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', 'KaTeX_Main', cursive !important;
+}
+
+/* 保护 \neq 的私有区斜杠符号 U+E020，确保其始终从 KaTeX 原生符号库提取绘制 */
+.katex .rlap,
+.katex .rlap *,
+.katex .katex-inner,
+.katex .katex-inner * {
+  font-family: 'KaTeX_Main' !important;
+}
+
+/* 8. 【核心修复】二元运算符（加 +、减 −、乘 ×、除 ÷、点乘 ·、正负 ± 等）手写化 */
+.katex .mbin {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+}
+
+/* 9. 【核心修复】定界符与圆括号、方括号（如 (, ), [, ], {, }）手写化 */
+.katex .mopen,
+.katex .mclose {
+  font-family: 'Caveat', 'HandwritingGreek', cursive !important;
+}
+
+/* 10. 标点符号（逗号 ,、冒号 :）手写化 */
+.katex .mpunct {
+  font-family: 'Caveat', 'HandwritingGreek', cursive !important;
+}
+
+/* 11. 【核心修复】分数线微调：手写轻盈柔和线 */
+.katex .frac-line {
+  border-bottom-style: solid !important;
+  border-bottom-width: 1.4px !important;
+  border-radius: 1px !important;
+  opacity: 0.95;
+}
+
+/* 12. 【核心修复】根号 SVG 柔化与笔墨质感优化 */
+.katex .sqrt svg {
+  overflow: visible !important;
+}
+.katex .sqrt .hide-tail svg path {
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 42px !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 0.35px rgba(18, 20, 24, 0.45));
 }
 
 /* 独立公式块 (block math) 的容器基础设定，稍后在 JS 中会被强行锁定为 60 的倍数高度 */

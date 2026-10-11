@@ -71,6 +71,48 @@ function neutralizeInlineMath(root) {
 }
 
 /**
+ * 【手写根号美化核心】将 KaTeX 机械生硬的多边形根号，替换为自然流畅的手写笔画路径
+ */
+function beautifyRadicals(root) {
+  const sqrtSvgs = root.querySelectorAll('.katex .sqrt .hide-tail svg');
+  sqrtSvgs.forEach(svg => {
+    const viewBox = svg.getAttribute('viewBox');
+    if (!viewBox) return;
+    const parts = viewBox.trim().split(/\s+/).map(Number);
+    if (parts.length < 4) return;
+    const H = parts[3];
+    if (!H || isNaN(H)) return;
+
+    const path = svg.querySelector('path');
+    if (!path) return;
+
+    // 为每个根号注入微弱的真实书写随机性（笔尖入笔高度与转折起伏）
+    const r1 = (Math.random() - 0.5) * 8;
+    const r2 = (Math.random() - 0.5) * 6;
+    const topY = Math.round(92 + r1);
+    const bottomY = Math.round(H - 42 + r2);
+    const startY = Math.round(H * 0.56 + r1 * 1.5);
+
+    // 优雅自然的人手执笔连贯路径：
+    // 起笔微带下顿 -> 顺势向右下运笔触底 -> 顿笔回折强力上挑 -> 翻腕过渡进入横向延伸上横线
+    const d = `M 220,${startY} ` +
+      `Q 280,${Math.round(startY + 35)} 355,${Math.round(H * 0.76)} ` +
+      `T 450,${bottomY} ` +
+      `Q 475,${bottomY} 530,${Math.round(H * 0.78)} ` +
+      `T 985,${topY} ` +
+      `Q 1025,${topY - 6} 1090,${topY} ` +
+      `L 400000,${topY}`;
+
+    path.setAttribute('d', d);
+    path.style.setProperty('fill', 'none', 'important');
+    path.style.setProperty('stroke', 'currentColor', 'important');
+    path.style.setProperty('stroke-width', '42px', 'important');
+    path.style.setProperty('stroke-linecap', 'round', 'important');
+    path.style.setProperty('stroke-linejoin', 'round', 'important');
+  });
+}
+
+/**
  * 【第二道保险】检测 WebView 文字缩放
  */
 function compensateTextZoom() {
@@ -467,6 +509,9 @@ export async function generateTypesetImages({
     ],
     throwOnError: false
   });
+
+  // ========== 美化根号为自然手写笔画 ==========
+  beautifyRadicals(masterBox);
 
   // 强制等待网络与本地字体加载完毕并留出绘制时间
   await document.fonts.ready;

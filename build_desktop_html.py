@@ -146,14 +146,15 @@ span.f1 {
   color: inherit;
 }
 
-/* 物理数学特定运算符与符号（如 ≠, ≤, ≥, ±, ×, ÷, ≈ 等）：优先采用 KaTeX 标准符号字体 */
+/* 物理数学特定运算符与符号（如 ≠, ≤, ≥, ±, ×, ÷, ≈ 等）：优先采用手写字体，没有的再 fallback 原生符号字体 */
 span.f1.math-sym {
-  font-family: 'KaTeX_Main', 'HandwritingGreek', 'MyHandwriting', sans-serif !important;
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', 'KaTeX_Main', sans-serif !important;
   color: inherit;
 }
 
 /* KaTeX 基础容器样式 */
 .katex {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
   font-size: 1.25em !important;
   color: inherit !important;
 }
@@ -163,14 +164,98 @@ span.f1.math-sym {
   line-height: normal !important;
 }
 
-/* 仅对公式中的变量、常数与斜体字母应用手写字体（包含拉丁手写与希腊手写），保留关系符（如 ≠、=、+ 等）的原生符号字体 */
+/* 1. 公式中的变量、常数与斜体字母应用手写字体（包含拉丁手写与希腊手写） */
 .katex .mathnormal,
 .katex .mord.mathnormal {
   font-family: 'Caveat', 'HandwritingGreek', cursive !important;
 }
 
-.katex .mord {
-  font-family: 'Caveat', 'HandwritingGreek', 'KaTeX_Main', cursive !important;
+/* 2. 【核心修复】数学算子与函数名（tan, sin, cos, ln, log, lim, max, min, exp, cot 等）手写化 */
+.katex .mop,
+.katex .mop * {
+  font-family: 'Caveat', 'HandwritingGreek', cursive !important;
+  font-size: 1.12em !important;
+  font-style: normal !important;
+}
+
+/* 3. 【核心修复】所有上下标与根指数（包括幂次 ^2, 下标 _B, _C, _N, _G, _E, _m, 中文下标 _合, 根号指数 \sqrt[3]{} 等）全量手写化 */
+.katex .msupsub,
+.katex .msupsub *,
+.katex .mtight,
+.katex .mtight *,
+.katex .katex-root,
+.katex .katex-root * {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', "KaiTi", cursive !important;
+}
+
+/* 4. 【核心修复】公式中普通数字、数值、常数与量纲单位（如 20 N, 10 N, 5 J, 30°, 分数 1/2, 根号下数值等）手写化 */
+.katex .mord:not(.katex-vbox):not(.katex-vbox *):not(.svg-align):not(.hide-tail):not(.hide-tail *):not(.sqrt) {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+}
+
+/* 5. 【核心修复】公式中出现的中文汉字（如 W_合, F_拉, \text{总功} 等）严格应用手写字体 */
+.katex .cjk_fallback,
+.katex .cjk_fallback * {
+  font-family: 'MyHandwriting', 'KaiTi', cursive !important;
+}
+
+/* 6. 【核心修复】正体字母与量纲单位（N, J, kg, s, C, V, m 等）手写化 */
+.katex .mathrm,
+.katex .mathrm *,
+.katex .text,
+.katex .text * {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+  font-style: normal !important;
+}
+
+/* 7. 【核心修复】关系符（等号 =、大于 >、小于 <、约等于 ≈、小于等于 ≤、大于等于 ≥ 等）全量手写化 */
+.katex .mrel:not(.katex-vbox *) {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', 'KaTeX_Main', cursive !important;
+}
+
+/* 保护 \neq 的私有区斜杠符号 U+E020，确保其始终从 KaTeX 原生符号库提取绘制 */
+.katex .rlap,
+.katex .rlap *,
+.katex .katex-inner,
+.katex .katex-inner * {
+  font-family: 'KaTeX_Main' !important;
+}
+
+/* 8. 【核心修复】二元运算符（加 +、减 −、乘 ×、除 ÷、点乘 ·、正负 ± 等）手写化 */
+.katex .mbin {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+}
+
+/* 9. 【核心修复】定界符与圆括号、方括号（如 (, ), [, ], {, }）手写化 */
+.katex .mopen,
+.katex .mclose {
+  font-family: 'Caveat', 'HandwritingGreek', cursive !important;
+}
+
+/* 10. 标点符号（逗号 ,、冒号 :）手写化 */
+.katex .mpunct {
+  font-family: 'Caveat', 'HandwritingGreek', cursive !important;
+}
+
+/* 11. 【核心修复】分数线微调：手写轻盈柔和线 */
+.katex .frac-line {
+  border-bottom-style: solid !important;
+  border-bottom-width: 1.4px !important;
+  border-radius: 1px !important;
+  opacity: 0.95;
+}
+
+/* 12. 【核心修复】根号 SVG 柔化与笔墨质感优化 */
+.katex .sqrt svg {
+  overflow: visible !important;
+}
+.katex .sqrt .hide-tail svg path {
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 42px !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 0 0.35px rgba(18, 20, 24, 0.45));
 }
 
 .katex-display {
@@ -233,15 +318,22 @@ span.f1.math-sym {
     with open(r"C:\Users\wb686\.gemini\antigravity\scratch\physics-typesetter-nonlinear\src\typesetter.js", 'r', encoding='utf-8') as f:
         ts_code = f.read()
 
+    # Extract beautifyRadicals
+    b_start = ts_code.find("function beautifyRadicals")
+    b_end = ts_code.find("function compensateTextZoom")
+    beautify_func_code = ts_code[b_start:b_end].strip()
+
     # Extract createNonlinearChineseCharGenerator
     g_start = ts_code.find("function createNonlinearChineseCharGenerator")
     g_end = ts_code.find("// 兼容别名")
     gen_func_code = ts_code[g_start:g_end].strip()
 
+    combined_funcs = beautify_func_code + "\n\n" + gen_func_code
+
     # In desktop HTML, replace createOrganicChineseCharGenerator
     old_g_start = content.find("function createOrganicChineseCharGenerator")
     old_g_end = content.find("async function generateTypesetImages")
-    content = content[:old_g_start] + gen_func_code + "\n\n" + content[old_g_end:]
+    content = content[:old_g_start] + combined_funcs + "\n\n" + content[old_g_end:]
 
     # 6. Replace generateTypesetImages implementation in desktop HTML
     ts_gen_start = ts_code.find("export async function generateTypesetImages")
@@ -323,23 +415,23 @@ presetBtns.forEach(btn => {
         "imageWidth,\n      nonlinearIntensity: nonlinearVal / 100,"
     )
 
-    # Update sample text in desktop HTML to include Greek & neq & red
+    # Update sample text in desktop HTML to include Greek, tan, sqrt, subscripts, degree, neq & red
     sample_replacement = """  const sample = `【答案】
 见解析
 
 【解析】
-带电粒子在匀强磁场中做匀速圆周运动，其洛伦兹力提供向心力：
-$$qvB = m\\\\frac{v^2}{R}$$
-解得粒子的轨道半径为：
-$$R = \\\\frac{mv}{qB}$$
-由题意可知，粒子运动的周期 $T$ 与角速度 $\\\\omega$ 满足：
+带电粒子在匀强电磁场中运动，所受电场力与重力的合力提供向心力：
+$$F_合 = \\\\sqrt{(mg)^2 + (qE)^2} = 20\\\\,\\\\text{N}$$
+由牛顿第二定律，在轨道最低点 $B$ 处，轨道支持力 $F_N$ 满足：
+$$F_N - mg = m\\\\frac{v_B^2}{R}$$
+由动能定理，从最高点运动到最低点过程中，合外力做功 $W_合$ 为：
+$$W_合 = W_G + W_E = \\\\frac{1}{2}mv_B^2 - 0$$
+已知偏转角满足 $\\\\tan \\\\alpha = \\\\frac{\\\\sqrt{3}}{3}$，即入射角 $\\\\alpha = 30^\\\\circ$。
+粒子在磁场中做匀速圆周运动，其周期 $T$ 与角速度 $\\\\omega$ 满足：
 $$T = \\\\frac{2\\\\pi m}{qB}, \\\\quad \\\\omega = \\\\frac{qB}{m}$$
-设粒子在磁场中的偏转角为 $\\\\theta = \\\\frac{\\\\pi}{3}$，运动时间为：
-$$t = \\\\frac{\\\\theta}{2\\\\pi} T = \\\\frac{m}{3qB}$$
-粒子出磁场后进入电场，由于入射角 $\\\\alpha \\\\neq 0$ 且加速度 $a \\\\neq 0$：\\\\\\\\此时粒子做类平抛运动，伴随波长 $\\\\lambda = \\\\frac{h}{p}$ 的德布罗意物质波。
-联立各式，且由于边界条件限制满足 $k \\\\neq 1$ 且 $\\\\beta \\\\neq 0$：
-$$v_t = \\\\sqrt{v^2 + a^2 t_1^2} = \\\\sqrt{2} v$$
-<red>综上所述，当且仅当 $\\\\alpha \\\\neq 0$ 时，该粒子在电磁场中运动的完整轨迹与时间已求解完毕。</red>`;"""
+由于边界条件限制，粒子入射速度满足 $v_0 \\\\neq 0$ 且加速度 $a \\\\neq 0$：
+$$v_t = \\\\sqrt{v_0^2 + 2as} = \\\\sqrt{2} v_0$$
+<red>综上所述，当且仅当 $\\\\alpha \\\\neq 0$ 且 $k \\\\neq 1$ 时，粒子的各项物理量均已求解完毕。</red>`;"""
 
     btn_sample_pos = content.find("btnLoadSample.addEventListener('click'")
     if btn_sample_pos != -1:

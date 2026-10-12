@@ -92,12 +92,17 @@ def main():
     download_url = target_art['archive_download_url']
 
     zip_path = r"C:\Users\wb686\.gemini\antigravity\scratch\PhysicsTypesetter-Nonlinear-iOS-IPA.zip"
-    print(f"Downloading artifact {artifact_id} to {zip_path}...")
+    print(f"Downloading artifact {artifact_id} via curl...")
 
-    opener = urllib.request.build_opener(NoAuthRedirectHandler)
-    dl_req = urllib.request.Request(download_url, headers=headers)
-    with opener.open(dl_req) as resp, open(zip_path, 'wb') as out_f:
-        shutil.copyfileobj(resp, out_f)
+    curl_cmd = [
+        'curl.exe', '-L',
+        '-H', f'Authorization: Bearer {token}',
+        '-H', 'Accept: application/vnd.github+json',
+        '--proxy', 'http://127.0.0.1:7890',
+        '-o', zip_path,
+        f"https://api.github.com/repos/{REPO}/actions/artifacts/{artifact_id}/zip"
+    ]
+    subprocess.run(curl_cmd, check=True)
 
     print("Download complete. Extracting IPA...")
     extract_dir = r"C:\Users\wb686\.gemini\antigravity\scratch\ipa_temp_nonlinear"

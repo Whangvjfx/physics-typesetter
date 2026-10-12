@@ -252,10 +252,10 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
 
       // 1. 多频宏观低频波：驱动字势在句子与段落中的舒卷流动 (周期 12 ~ 26 字，超平滑导数有界)
       const waveSize = Math.sin(seq * 0.28 + 0.7) * 0.70 + Math.sin(seq * 0.11 + 2.1) * 0.30;
-      let targetSize = 1.0 + waveSize * (0.16 * K);
+      let targetSize = 1.0 + waveSize * (0.048 * K);
 
       const waveAspect = Math.cos(seq * 0.24 + 1.4) * 0.65 + Math.sin(seq * 0.09 + 0.5) * 0.35;
-      let targetAspect = 1.0 + waveAspect * (0.22 * K);
+      let targetAspect = 1.0 + waveAspect * (0.072 * K);
 
       const waveRotX = Math.sin(seq * 0.22 + 1.8);
       let targetRotX = waveRotX * (24.0 * K);
@@ -283,17 +283,17 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
         // 偏向相反的 3D 梯形俯仰态（如前字偏俯势，当前字微仰势，相映成趣）
         targetRotX = -targetRotX * 0.75;
         targetRotY = -targetRotY * 0.75;
-        // 宽扁与修长互补转化
-        targetAspect = 1.0 - (targetAspect - 1.0) * 0.80;
+        // 宽扁与修长互补转化 (幅度收紧，杜绝过扁或过窄)
+        targetAspect = 1.0 - (targetAspect - 1.0) * 0.65;
         // 支点互补漂移
         targetOx = 100 - targetOx;
         targetOy = 100 - targetOy;
-        // 尺寸微调（幅度严格限制在 0.03 以内）
-        targetSize += (count % 2 === 1 ? 0.03 : -0.03) * K;
+        // 尺寸微调（严格限制在 0.012 以内，杜绝大小突变）
+        targetSize += (count % 2 === 1 ? 0.012 : -0.012) * K;
       }
 
       // 3. 【一阶惯性动量阻尼更新】(Physical Inertia Damper)
-      const alpha = 0.72; // 0.72 保留前字惯性，0.28 渐进响应新目标
+      const alpha = 0.75; // 0.75 保留前字惯性，0.25 渐进响应新目标
       const rawSize = state.size * alpha + targetSize * (1 - alpha);
       const rawAspect = state.aspect * alpha + targetAspect * (1 - alpha);
       const rawRotX = state.rotX * alpha + targetRotX * (1 - alpha);
@@ -306,8 +306,8 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
       const rawPressure = state.pressure * alpha + targetPressure * (1 - alpha);
 
       // 4. 【单步最大速率限制器】(Slew Rate Clamp: 严格截断相邻两字的最大突变率)
-      state.size = clampDelta(rawSize, state.size, 0.024 + 0.012 * K);
-      state.aspect = clampDelta(rawAspect, state.aspect, 0.030 + 0.015 * K);
+      state.size = clampDelta(rawSize, state.size, 0.009 + 0.005 * K);
+      state.aspect = clampDelta(rawAspect, state.aspect, 0.013 + 0.007 * K);
       state.rotX = clampDelta(rawRotX, state.rotX, 1.8 + 1.2 * K);
       state.rotY = clampDelta(rawRotY, state.rotY, 1.4 + 1.0 * K);
       state.rotZ = clampDelta(rawRotZ, state.rotZ, 0.9 + 0.6 * K);
@@ -316,6 +316,13 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
       state.oy = clampDelta(rawOy, state.oy, 2.4 + 1.6 * K);
       state.pDist = clampDelta(rawPDist, state.pDist, 10 + 10 * K);
       state.pressure = Math.max(0.82, Math.min(1.05, clampDelta(rawPressure, state.pressure, 0.03)));
+
+      // 4.1 【极值硬性区间锁定】：严格压缩最大字与最小字的大小差距极值，杜绝过大或过小
+      const maxDeltaSize = 0.048 * (0.6 + 0.4 * K); // 偏离基准尺寸最大不超过 ±4.8%
+      state.size = Math.max(1.0 - maxDeltaSize, Math.min(1.0 + maxDeltaSize, state.size));
+
+      const maxDeltaAspect = 0.072 * (0.6 + 0.4 * K); // 偏离基准展弦比最大不超过 ±7.2%
+      state.aspect = Math.max(1.0 - maxDeltaAspect, Math.min(1.0 + maxDeltaAspect, state.aspect));
 
       prevChar = char;
 

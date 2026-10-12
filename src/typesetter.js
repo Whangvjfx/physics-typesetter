@@ -434,7 +434,15 @@ export async function generateTypesetImages({
     return formula;
   });
 
-  // 3. 全面支持在普通文本中直接书写的 LaTeX 数学与希腊符号，转义为 Unicode 字符
+  // 3. 【核心修复】：防止公式内 < 与 > 破坏 HTML 解析器导致公式被吞噬与乱码
+  // 在 HTML 环境下，公式内的形如 $F_{\text{库}}<mg\sin\alpha$ 会被浏览器的 innerHTML 解析器误判为 HTML 标签（如 <mg...），
+  // 导致标签闭合失效、后续公式内容被吞噬、闭合 $ 丢失，进而产生乱码。
+  // 将数学公式内部所有 < 与 > 转换为标准 LaTeX 宏 \lt 与 \gt，彻底杜绝 HTML 标签误吞！
+  text = text.replace(/(\$\$[\s\S]*?\$\$|\$[^$]*?\$)/g, (formula) => {
+    return formula.replace(/</g, '\\lt ').replace(/>/g, '\\gt ');
+  });
+
+  // 4. 全面支持在普通文本中直接书写的 LaTeX 数学与希腊符号，转义为 Unicode 字符
   // 防止在普通文本中书写 \neq, \alpha 时被当成换行符或损坏
   const plainTextSymbolMap = [
     [/\\neq\b/g, '≠'],
@@ -476,7 +484,16 @@ export async function generateTypesetImages({
       for (const [reg, sym] of plainTextSymbolMap) {
         mathParts[i] = mathParts[i].replace(reg, sym);
       }
-      mathParts[i] = mathParts[i].replace(/\\\\/g, '【MANUAL_BR】').replace(/\\/g, '【MANUAL_BR】');
+      // 保护 <red> 与 </red>，将普通文本中可能出现的裸写 < 与 > 转义为 HTML 实体，防止注入
+      mathParts[i] = mathParts[i]
+        .replace(/<red>/g, '【RED_OPEN】')
+        .replace(/<\/red>/g, '【RED_CLOSE】')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/【RED_OPEN】/g, '<red>')
+        .replace(/【RED_CLOSE】/g, '</red>')
+        .replace(/\\\\/g, '【MANUAL_BR】')
+        .replace(/\\/g, '【MANUAL_BR】');
     }
   }
   let safeText = mathParts.join('');
@@ -750,7 +767,7 @@ export async function generateTypesetImages({
 
     const canvas = await html2canvas(pages[i], {
       scale: 2,
-      backgroundColor: '#fbf9f4',
+      backgroundColor: '#fdfdfe',
       useCORS: true,
       logging: false
     });

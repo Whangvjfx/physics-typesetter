@@ -420,6 +420,9 @@ presetBtns.forEach(btn => {
     content = re.sub(r'btnLoadSample\.addEventListener\(\'click\',.*?\}\);', '', content, flags=re.DOTALL)
     content = content.replace("const btnLoadSample = document.getElementById('btn-load-sample');", "")
 
+    # 9. 纸张底色全面白皙化 (由偏黄 #fbf9f4 升级为纯白答题纸质感 #fdfdfe)
+    content = content.replace("#fbf9f4", "#fdfdfe")
+
     os.makedirs(os.path.dirname(dest_html), exist_ok=True)
     with open(dest_html, 'w', encoding='utf-8') as f:
         f.write(content)

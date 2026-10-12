@@ -1161,7 +1161,7 @@ span.f1.math-sym {
 .page-container {
   width: 800px;
   height: 1131px;
-  background-color: #fbf9f4 !important;
+  background-color: #fdfdfe !important;
   color: #111111 !important;
   padding: 40px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1185,7 +1185,7 @@ span.f1.math-sym {
   position: absolute;
   top: -12px;
   left: 20px;
-  background: #fbf9f4 !important;
+  background: #fdfdfe !important;
   padding: 0 10px;
   font-size: 18px !important;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Heiti SC", "Noto Sans CJK SC", "Source Han Sans CN", "Microsoft YaHei", "SimHei", "黑体", sans-serif !important;

@@ -222,10 +222,10 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
   let state = {
     size: 1.0,
     aspect: 1.0,    // >1 略宽展，<1 略挺秀
-    rotX: 2.0,      // 3D 俯仰透视 (倒梯形/正梯形)
-    rotY: -1.5,     // 3D 偏转透视 (左窄右展/右窄左展)
-    rotZ: 2.5,      // 右手主轴自然倾斜
-    skew: -1.2,     // 顺势剪切
+    rotX: 0.0,      // 3D 俯仰透视 (倒梯形/正梯形)
+    rotY: 0.0,      // 3D 偏转透视 (左窄右展/右窄左展)
+    rotZ: 2.0 * K,  // 右手主轴自然倾斜随 K 自适应 (K=0 时为 0)
+    skew: -1.0 * K, // 顺势剪切随 K 自适应 (K=0 时为 0)
     ox: 50.0,       // 偏心支点 X
     oy: 50.0,       // 偏心支点 Y
     pDist: 220,     // 透视景深
@@ -257,17 +257,21 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
       const waveAspect = Math.cos(seq * 0.24 + 1.4) * 0.65 + Math.sin(seq * 0.09 + 0.5) * 0.35;
       let targetAspect = 1.0 + waveAspect * (0.072 * K);
 
-      const waveRotX = Math.sin(seq * 0.22 + 1.8);
-      let targetRotX = waveRotX * (24.0 * K);
+      const waveRotX = Math.sin(seq * 0.22 + 1.8) * 0.75 + Math.cos(seq * 0.49 + 0.7) * 0.25;
+      let targetRotX = waveRotX * (26.0 * K);
 
-      const waveRotY = Math.cos(seq * 0.19 + 0.8);
-      let targetRotY = waveRotY * (18.0 * K);
+      const waveRotY = Math.cos(seq * 0.19 + 0.8) * 0.75 + Math.sin(seq * 0.43 + 2.1) * 0.25;
+      let targetRotY = waveRotY * (20.0 * K);
 
-      const waveRotZ = Math.sin(seq * 0.26 + 0.4);
-      let targetRotZ = 2.8 + waveRotZ * (3.8 * K);
+      // 【核心升级】：转动幅度随滑块 K 显著放大联动！
+      // 复合多频手腕运笔旋转波 (主频周期约 12~18 字，副频波澜周期约 4~6 字)
+      const waveRotZ = Math.sin(seq * 0.27 + 0.4) * 0.72 + Math.sin(seq * 0.58 + 1.9) * 0.28;
+      const rotZBase = 2.6 * K; // 右手自然主轴偏角随滑块平滑展开
+      const rotZAmplitude = 12.8 * K; // 摆动幅度随 K 显著增强 (K=1.0 时幅度达到 ±12.8°，总摆幅高达 16°+)
+      let targetRotZ = rotZBase + waveRotZ * rotZAmplitude;
 
       const waveSkew = Math.cos(seq * 0.23 + 1.5);
-      let targetSkew = -1.5 + waveSkew * (2.2 * K);
+      let targetSkew = (-1.2 * K) + waveSkew * (2.8 * K);
 
       let targetOx = 50 + Math.cos(seq * 0.21 + 1.2) * (18 * K);
       let targetOy = 50 + Math.sin(seq * 0.17 + 2.4) * (20 * K);
@@ -283,6 +287,8 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
         // 偏向相反的 3D 梯形俯仰态（如前字偏俯势，当前字微仰势，相映成趣）
         targetRotX = -targetRotX * 0.75;
         targetRotY = -targetRotY * 0.75;
+        // 平面旋转角互补反相偏移（但限制在受控容差内，既有不同姿态，又顺势自然）
+        targetRotZ = rotZBase - (targetRotZ - rotZBase) * 0.60;
         // 宽扁与修长互补转化 (幅度收紧，杜绝过扁或过窄)
         targetAspect = 1.0 - (targetAspect - 1.0) * 0.65;
         // 支点互补漂移
@@ -293,24 +299,31 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
       }
 
       // 3. 【一阶惯性动量阻尼更新】(Physical Inertia Damper)
-      const alpha = 0.75; // 0.75 保留前字惯性，0.25 渐进响应新目标
-      const rawSize = state.size * alpha + targetSize * (1 - alpha);
-      const rawAspect = state.aspect * alpha + targetAspect * (1 - alpha);
-      const rawRotX = state.rotX * alpha + targetRotX * (1 - alpha);
-      const rawRotY = state.rotY * alpha + targetRotY * (1 - alpha);
-      const rawRotZ = state.rotZ * alpha + targetRotZ * (1 - alpha);
-      const rawSkew = state.skew * alpha + targetSkew * (1 - alpha);
-      const rawOx = state.ox * alpha + targetOx * (1 - alpha);
-      const rawOy = state.oy * alpha + targetOy * (1 - alpha);
-      const rawPDist = state.pDist * alpha + targetPDist * (1 - alpha);
-      const rawPressure = state.pressure * alpha + targetPressure * (1 - alpha);
+      // 尺寸与展弦比采用高阻尼 0.75，牢牢锁住大小极值，杜绝大小突变；
+      // 旋转角采用 0.58 适度动量阻尼，既保留手腕运动的连续性，又能淋漓尽致展现旋转动态！
+      const alphaSize = 0.75;
+      const alphaRot = 0.58;
+      const rawSize = state.size * alphaSize + targetSize * (1 - alphaSize);
+      const rawAspect = state.aspect * alphaSize + targetAspect * (1 - alphaSize);
+      const rawRotX = state.rotX * alphaRot + targetRotX * (1 - alphaRot);
+      const rawRotY = state.rotY * alphaRot + targetRotY * (1 - alphaRot);
+      const rawRotZ = state.rotZ * alphaRot + targetRotZ * (1 - alphaRot);
+      const rawSkew = state.skew * alphaRot + targetSkew * (1 - alphaRot);
+      const rawOx = state.ox * alphaRot + targetOx * (1 - alphaRot);
+      const rawOy = state.oy * alphaRot + targetOy * (1 - alphaRot);
+      const rawPDist = state.pDist * alphaRot + targetPDist * (1 - alphaRot);
+      const rawPressure = state.pressure * alphaSize + targetPressure * (1 - alphaSize);
 
       // 4. 【单步最大速率限制器】(Slew Rate Clamp: 严格截断相邻两字的最大突变率)
       state.size = clampDelta(rawSize, state.size, 0.009 + 0.005 * K);
       state.aspect = clampDelta(rawAspect, state.aspect, 0.013 + 0.007 * K);
-      state.rotX = clampDelta(rawRotX, state.rotX, 1.8 + 1.2 * K);
-      state.rotY = clampDelta(rawRotY, state.rotY, 1.4 + 1.0 * K);
-      state.rotZ = clampDelta(rawRotZ, state.rotZ, 0.9 + 0.6 * K);
+      state.rotX = clampDelta(rawRotX, state.rotX, 2.2 + 1.8 * K);
+      state.rotY = clampDelta(rawRotY, state.rotY, 1.8 + 1.4 * K);
+
+      // 【核心物理约束：相近的字转动角度不得差过大】
+      // 限制相邻两字单步旋转角最大差值：K=1.0 时单步最大变化为 2.2°~2.4°，K=0.6 时约 1.5°~1.8°，K=0 时为 0°
+      const maxStepRotZ = 2.4 * K;
+      state.rotZ = clampDelta(rawRotZ, state.rotZ, maxStepRotZ);
       state.skew = clampDelta(rawSkew, state.skew, 0.6 + 0.4 * K);
       state.ox = clampDelta(rawOx, state.ox, 2.4 + 1.6 * K);
       state.oy = clampDelta(rawOy, state.oy, 2.4 + 1.6 * K);

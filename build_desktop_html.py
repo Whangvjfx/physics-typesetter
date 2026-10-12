@@ -171,10 +171,8 @@ span.f1.math-sym {
 }
 
 /* 2. 【核心修复】数学算子与函数名（tan, sin, cos, ln, log, lim, max, min, exp, cot 等）手写化 */
-.katex .mop,
-.katex .mop * {
+.katex .mop:not(.op-symbol) {
   font-family: 'Caveat', 'HandwritingGreek', cursive !important;
-  font-size: 1.12em !important;
   font-style: normal !important;
 }
 

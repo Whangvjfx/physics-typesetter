@@ -1137,6 +1137,11 @@ span.f1.math-sym {
   font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', "KaiTi", cursive !important;
 }
 
+/* 消除手写体（如 Caveat 的 t 悬臂、r 突起、R 腿部等）与右上标/右下标的视觉重叠撞击 */
+.katex .msupsub {
+  margin-left: 0.16em !important;
+}
+
 /* 4. 【核心修复】公式中普通数字、数值、常数与量纲单位（如 20 N, 10 N, 5 J, 30°, 分数 1/2, 根号下数值等）手写化 */
 .katex .mord:not(.katex-vbox):not(.katex-vbox *):not(.svg-align):not(.hide-tail):not(.hide-tail *):not(.sqrt) {
   font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;

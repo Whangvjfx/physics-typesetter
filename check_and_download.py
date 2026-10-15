@@ -33,22 +33,34 @@ def main():
         'User-Agent': 'Antigravity-Agent'
     }
 
-    # 1. Find latest run on feature/nonlinear
-    url = f"https://api.github.com/repos/{REPO}/actions/runs?branch=feature/nonlinear"
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req) as resp:
-        data = json.loads(resp.read().decode('utf-8'))
-        runs = data.get('workflow_runs', [])
+    # 1. Find latest 'Build iOS IPA' run on feature/nonlinear
+    target_run = None
+    for _ in range(12):
+        try:
+            url = f"https://api.github.com/repos/{REPO}/actions/runs?branch=feature/nonlinear"
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                runs = data.get('workflow_runs', [])
+            for r in runs:
+                if r.get('name') == 'Build iOS IPA':
+                    target_run = r
+                    break
+            if target_run:
+                break
+        except Exception as e:
+            print(f"Error fetching runs: {e}")
+        time.sleep(5)
 
-    if not runs:
-        print("No workflow runs found on branch feature/nonlinear!")
-        return
+    if not target_run:
+        print("No 'Build iOS IPA' workflow runs found on branch feature/nonlinear!")
+        return False
 
-    latest_run = runs[0]
+    latest_run = target_run
     run_id = latest_run['id']
     commit_msg = latest_run.get('head_commit', {}).get('message', '').strip()
     commit_id = latest_run.get('head_commit', {}).get('id', '')[:7]
-    print(f"Monitoring Latest Run: {run_id}")
+    print(f"Monitoring Latest iOS Run: {run_id}")
     print(f"Workflow: {latest_run.get('name')}")
     print(f"Commit: {commit_id} - {commit_msg}")
 

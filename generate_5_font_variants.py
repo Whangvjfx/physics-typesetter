@@ -2,8 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 generate_5_font_variants.py
-基于 Python fonttools 离线构建 5 套近邻手写字体变体（myfont-var1 ~ myfont-var5）
-与原字体 v0 共同构成 6 槽位动态字形流形池。
+基于 Python fonttools 离线构建 5 套具备【显著手写形态差异】的近邻变体字库（myfont-var1 ~ myfont-var5）
+针对 1000 常用字及高频物理字符进行深度差异化几何重构：
+  - Var 1 (劲挺瘦长态 · Tall & Slender): sx ~ 0.83, sy ~ 1.12, 瘦长挺拔
+  - Var 2 (宽博扁阔态 · Wide & Flat): sx ~ 1.22, sy ~ 0.84, 扁宽舒展, 重心下沉
+  - Var 3 (疾书右倾态 · Dynamic Right-Slant): shear_x ~ +10.5°, 明显向右倾斜, 行气疾走
+  - Var 4 (逆锋端凝S曲度 · Left Counter-Tilt & S-Spine): shear_x ~ -5.5°, 垂直S型脊椎波动
+  - Var 5 (左低右高上开下收 · Rising Horizon & Top-Broad): shear_y ~ +7.2°, 上部外扩下部收敛
 """
 
 import math
@@ -11,12 +16,24 @@ import random
 import copy
 import os
 import io
+import shutil
+from collections import Counter
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables._g_l_y_f import GlyphCoordinates
 from fontTools import subset
 
 def get_target_characters():
-    # 1. 高中物理专属高频词汇与符号
+    # 1. 现代汉语最高频 1000 常用字 (按语料库真实加权词频降序提取)
+    import jieba
+    jieba.initialize()
+    char_counts = Counter()
+    for word, freq in jieba.dt.FREQ.items():
+        for ch in word:
+            if '\u4e00' <= ch <= '\u9fff':
+                char_counts[ch] += freq
+    top_1000_chars = [ch for ch, cnt in char_counts.most_common()][:1000]
+
+    # 2. 高中物理专属高频词汇与符号
     physics_vocab = (
         "的一是在不了有和人这中大为上个国我以要他时来用们生到作地于出会就也学对也力质速度加速度位移时间功动能势能机械能动量冲量牛顿"
         "洛伦兹库仑安培法拉第楞次焦耳麦克斯韦欧姆电阻电容电感电动势磁场电场引力万有引力轨道周期频率波长振幅相位简谐振动单摆弹簧滑块"
@@ -42,7 +59,7 @@ def get_target_characters():
         "改变量可知做功结合过程列动能定理直接解得"
     )
 
-    # 2. GB2312 一级高频常用汉字
+    # 3. GB2312 常用汉字
     gb_chars = []
     for qu in range(16, 56):
         for wei in range(1, 95):
@@ -52,19 +69,21 @@ def get_target_characters():
             except Exception:
                 pass
 
-    char_set = set(physics_vocab)
+    char_set = set(top_1000_chars)
+    for c in physics_vocab:
+        char_set.add(c)
     for c in gb_chars:
         char_set.add(c)
-        if len(char_set) >= 2050:
+        if len(char_set) >= 3200:
             break
 
-    # 3. 常见标点符号
+    # 4. 常见标点与符号
     for p in '，。！？；：“”‘’（）【】《》、…—～·+-*/=<>≤≥≠≈':
         char_set.add(p)
 
-    return char_set
+    return char_set, top_1000_chars
 
-def transform_glyph(coords, gname, variant_idx):
+def transform_glyph_dramatic(coords, gname, variant_idx):
     if len(coords) == 0:
         return coords
 
@@ -75,7 +94,7 @@ def transform_glyph(coords, gname, variant_idx):
     W = max(1.0, float(max(xs) - min(xs)))
     H = max(1.0, float(max(ys) - min(ys)))
 
-    # 确定性伪随机数生成器（按字形名和变体号哈希）
+    # 确定性哈希伪随机
     h = 0
     for ch in gname:
         h = (h * 31 + ord(ch)) & 0xFFFFFFFF
@@ -85,15 +104,13 @@ def transform_glyph(coords, gname, variant_idx):
     new_coords = []
 
     if variant_idx == 1:
-        # 变体 1 (`var1` · 修长聚心态)：
-        # 水平微缩 sx ∈ [0.965, 0.985], sy = 1/sx；右上微倾剪切 shear_y ∈ [+1.0°, +1.8°]；中宫微聚 2%
-        sx = rng.uniform(0.965, 0.982)
-        sy = 1.0 / sx
-        shear_y = math.radians(rng.uniform(1.0, 1.8))
-        Ax = rng.uniform(8.0, 13.0)
-        Ay = rng.uniform(7.0, 12.0)
-        w1 = rng.uniform(0.85, 1.15)
-        w2 = rng.uniform(0.85, 1.15)
+        # 变体 1 (劲挺瘦长态 · Tall & Slender):
+        # sx ∈ [0.82, 0.85], sy ∈ [1.10, 1.14], 右上微仰剪切 shear_y ~ 2.5°
+        sx = rng.uniform(0.82, 0.85)
+        sy = rng.uniform(1.10, 1.14)
+        shear_y = math.radians(rng.uniform(2.0, 3.0))
+        Ax = rng.uniform(12.0, 18.0)
+        Ay = rng.uniform(10.0, 16.0)
         phi1 = rng.uniform(0, math.pi * 2)
         phi2 = rng.uniform(0, math.pi * 2)
 
@@ -102,25 +119,36 @@ def transform_glyph(coords, gname, variant_idx):
             y1 = cy + (y - cy) * sy
             y2 = y1 + (x1 - cx) * math.tan(shear_y)
             x2 = x1
-            r = math.sqrt(((x2 - cx) / W) ** 2 + ((y2 - cy) / H) ** 2)
-            if r < 0.5:
-                pull = 0.02 * (1.0 - 2.0 * r)
-                x2 -= (x2 - cx) * pull
-                y2 -= (y2 - cy) * pull
-            dx_wave = Ax * math.sin(2 * math.pi * (y2 - cy) / H * w1 + phi1)
-            dy_wave = Ay * math.cos(2 * math.pi * (x2 - cx) / W * w2 + phi2)
+            dx_wave = Ax * math.sin(2 * math.pi * (y2 - cy) / H + phi1)
+            dy_wave = Ay * math.cos(2 * math.pi * (x2 - cx) / W + phi2)
             new_coords.append((round(x2 + dx_wave), round(y2 + dy_wave)))
 
     elif variant_idx == 2:
-        # 变体 2 (`var2` · 扁阔舒展态)：
-        # 水平微展 sx ∈ [1.02, 1.04], sy = 1/sx；水平微剪切 shear_x ∈ [-1.2°, +0.8°]；低频空间波
-        sx = rng.uniform(1.02, 1.038)
-        sy = 1.0 / sx
-        shear_x = math.radians(rng.uniform(-1.2, 0.8))
-        Ax = rng.uniform(9.0, 14.0)
-        Ay = rng.uniform(8.0, 13.0)
-        w1 = rng.uniform(0.65, 0.85)
-        w2 = rng.uniform(0.65, 0.85)
+        # 变体 2 (宽博扁阔态 · Wide & Flat):
+        # sx ∈ [1.20, 1.25], sy ∈ [0.82, 0.86], 重心微沉
+        sx = rng.uniform(1.20, 1.24)
+        sy = rng.uniform(0.82, 0.86)
+        y_shift = rng.uniform(-25.0, -15.0)
+        Ax = rng.uniform(14.0, 20.0)
+        Ay = rng.uniform(10.0, 15.0)
+        phi1 = rng.uniform(0, math.pi * 2)
+        phi2 = rng.uniform(0, math.pi * 2)
+
+        for x, y in coords:
+            x1 = cx + (x - cx) * sx
+            y1 = cy + (y - cy) * sy + y_shift
+            dx_wave = Ax * math.sin(2 * math.pi * (y1 - cy) / H + phi1)
+            dy_wave = Ay * math.cos(2 * math.pi * (x1 - cx) / W + phi2)
+            new_coords.append((round(x1 + dx_wave), round(y1 + dy_wave)))
+
+    elif variant_idx == 3:
+        # 变体 3 (疾书右倾态 · Dynamic Right-Slant Italic):
+        # shear_x ∈ [+9.5°, +11.5°] (明显向右倾斜)
+        shear_x = math.radians(rng.uniform(9.5, 11.5))
+        sx = rng.uniform(0.96, 1.02)
+        sy = rng.uniform(0.96, 1.02)
+        Ax = rng.uniform(16.0, 24.0)
+        Ay = rng.uniform(12.0, 18.0)
         phi1 = rng.uniform(0, math.pi * 2)
         phi2 = rng.uniform(0, math.pi * 2)
 
@@ -129,71 +157,39 @@ def transform_glyph(coords, gname, variant_idx):
             y1 = cy + (y - cy) * sy
             x2 = x1 + (y1 - cy) * math.tan(shear_x)
             y2 = y1
-            dx_wave = Ax * math.sin(2 * math.pi * (y2 - cy) / H * w1 + phi1)
-            dy_wave = Ay * math.cos(2 * math.pi * (x2 - cx) / W * w2 + phi2)
+            dx_wave = Ax * math.sin(2 * math.pi * (y2 - cy) / H + phi1)
+            dy_wave = Ay * math.cos(2 * math.pi * (x2 - cx) / W + phi2)
             new_coords.append((round(x2 + dx_wave), round(y2 + dy_wave)))
 
-    elif variant_idx == 3:
-        # 变体 3 (`var3` · 左敛右扬态)：
-        # 非对称空间场：左侧紧凑 s_left ∈ [0.95, 0.98]，右侧主笔向右上方舒展发力
-        s_left = rng.uniform(0.955, 0.98)
-        Ax = rng.uniform(8.0, 13.0)
-        Ay = rng.uniform(8.0, 13.0)
-        w1 = rng.uniform(0.8, 1.1)
-        w2 = rng.uniform(0.8, 1.1)
-        phi1 = rng.uniform(0, math.pi * 2)
-        phi2 = rng.uniform(0, math.pi * 2)
-
-        for x, y in coords:
-            if x < cx:
-                x1 = cx + (x - cx) * s_left
-                y1 = y
-            else:
-                x1 = cx + (x - cx) * 1.032
-                y1 = y + (x - cx) * 0.030  # 笔画向右上微扬
-            dx_wave = Ax * math.sin(2 * math.pi * (y1 - cy) / H * w1 + phi1)
-            dy_wave = Ay * math.cos(2 * math.pi * (x1 - cx) / W * w2 + phi2)
-            new_coords.append((round(x1 + dx_wave), round(y1 + dy_wave)))
-
     elif variant_idx == 4:
-        # 变体 4 (`var4` · 内紧外松态)：
-        # 非线性径向重映射：内部 (r < 0.45) 笔画微缩 3%~4%，外部 (r > 0.5) 笔画微张 2%~3%
-        Ax = rng.uniform(8.0, 13.0)
-        Ay = rng.uniform(8.0, 13.0)
-        w1 = rng.uniform(0.85, 1.1)
-        w2 = rng.uniform(0.85, 1.1)
-        phi1 = rng.uniform(0, math.pi * 2)
-        phi2 = rng.uniform(0, math.pi * 2)
+        # 变体 4 (逆锋微左倾 + S型脊椎反曲态 · Left Counter-Tilt & S-Spine):
+        # shear_x ∈ [-6.0°, -4.5°], 垂直 S 曲线摆动
+        shear_x = math.radians(rng.uniform(-6.0, -4.5))
+        sx = rng.uniform(0.92, 0.96)
+        sy = rng.uniform(0.98, 1.02)
+        A_spine = rng.uniform(36.0, 46.0)
 
         for x, y in coords:
-            r = math.sqrt(((x - cx) / W) ** 2 + ((y - cy) / H) ** 2)
-            if r < 0.5:
-                scale = 1.0 - 0.035 * (1.0 - 2.0 * r)
-            else:
-                scale = 1.0 + 0.024 * min(1.0, 2.0 * r - 1.0)
-            x1 = cx + (x - cx) * scale
-            y1 = cy + (y - cy) * scale
-            dx_wave = Ax * math.sin(2 * math.pi * (y1 - cy) / H * w1 + phi1)
-            dy_wave = Ay * math.cos(2 * math.pi * (x1 - cx) / W * w2 + phi2)
-            new_coords.append((round(x1 + dx_wave), round(y1 + dy_wave)))
+            x1 = cx + (x - cx) * sx
+            y1 = cy + (y - cy) * sy
+            x2 = x1 + (y1 - cy) * math.tan(shear_x)
+            dx_spine = A_spine * math.sin(2 * math.pi * (y1 - cy) / H)
+            new_coords.append((round(x2 + dx_spine), round(y1)))
 
     elif variant_idx == 5:
-        # 变体 5 (`var5` · 疾书连贯态)：
-        # 顺时针微倾 shear_x ∈ [+1.5°, +2.2°]，叠加略高频平滑空间场
-        shear_x = math.radians(rng.uniform(1.5, 2.2))
-        Ax = rng.uniform(10.0, 15.0)
-        Ay = rng.uniform(9.0, 14.0)
-        w1 = rng.uniform(0.95, 1.25)
-        w2 = rng.uniform(0.95, 1.25)
+        # 变体 5 (左低右高 + 上宽下敛耸肩态 · Rising Horizon & Top-Broad):
+        # shear_y ∈ [+6.5°, +8.0°], 梯形变异 (上宽下收)
+        shear_y = math.radians(rng.uniform(6.5, 8.0))
+        Ax = rng.uniform(12.0, 18.0)
         phi1 = rng.uniform(0, math.pi * 2)
-        phi2 = rng.uniform(0, math.pi * 2)
 
         for x, y in coords:
-            x1 = x + (y - cy) * math.tan(shear_x)
-            y1 = y
-            dx_wave = Ax * math.sin(2 * math.pi * (y1 - cy) / H * w1 + phi1)
-            dy_wave = Ay * math.cos(2 * math.pi * (x1 - cx) / W * w2 + phi2)
-            new_coords.append((round(x1 + dx_wave), round(y1 + dy_wave)))
+            norm_y = (y - cy) / (H / 2.0)  # -1 到 +1
+            scale_x = 1.0 + 0.13 * norm_y   # 上部展开 1.13, 下部收缩 0.87
+            x1 = cx + (x - cx) * scale_x
+            y1 = y + (x1 - cx) * math.tan(shear_y)
+            dx_wave = Ax * math.sin(2 * math.pi * (y1 - cy) / H + phi1)
+            new_coords.append((round(x1 + dx_wave), round(y1)))
 
     return GlyphCoordinates(new_coords)
 
@@ -212,39 +208,42 @@ def main():
         base_font_path = os.path.join('public', 'fonts', 'myfont.woff2')
     print(f"Loading base font from: {base_font_path}")
 
-    # 1. 提取目标高频字符集
-    target_chars = get_target_characters()
-    print(f"Target characters pool size: {len(target_chars)}")
+    # 1. 提取目标字符集
+    target_chars, top_1000 = get_target_characters()
+    print(f"Target characters pool size: {len(target_chars)} (Includes top 1000 common chars)")
 
     base_font = TTFont(base_font_path)
     cmap = base_font.getBestCmap()
 
-    # 收集在原字体中存在的目标 Unicode
+    # 收集在原字体中存在的 Unicode
     unicodes = [ord(c) for c in target_chars if ord(c) in cmap]
-    # 强制纳入 ASCII 打印字符 (32 ~ 126)
     for cp in range(32, 127):
         if cp in cmap:
             unicodes.append(cp)
     unicodes = sorted(list(set(unicodes)))
     print(f"Matched Unicode codepoints in font: {len(unicodes)}")
 
-    # 2. 先做基础子集化 (Subsetting)
-    print("Subsetting base font to high-priority glyphs...")
+    # 2. 基础子集化
+    print("Subsetting base font...")
     options = subset.Options()
     options.flavor = 'woff2'
     subsetter = subset.Subsetter(options=options)
     subsetter.populate(unicodes=unicodes)
     subsetter.subset(base_font)
 
-    # 暂存为内存中的 TTF/WOFF2 基础对象
     subset_buf = io.BytesIO()
     base_font.save(subset_buf)
     subset_bytes = subset_buf.getvalue()
     print(f"Subset base font size: {len(subset_bytes)} bytes (~{round(len(subset_bytes)/1024)} KB)")
 
-    # 3. 循环衍生 5 套变体字体
+    # 3. 循环衍生 5 套显著差异化变体字体
     out_dirs = [
         os.path.join('public', 'fonts'),
+        os.path.join('dist', 'fonts'),
+        os.path.join('android', 'app', 'src', 'main', 'assets', 'public', 'fonts'),
+        os.path.join('ios', 'App', 'App', 'public', 'fonts'),
+        r'C:\Users\wb686\Desktop\非线性\fonts',
+        r'C:\Users\wb686\Desktop\非线性_V4_Pro\fonts',
         '.'
     ]
     for d in out_dirs:
@@ -252,9 +251,8 @@ def main():
 
     for v_idx in range(1, 6):
         family_name = f"MyHandwriting-Var{v_idx}"
-        print(f"\n--- Generating Variant {v_idx}: {family_name} ---")
+        print(f"\n--- Generating Dramatic Variant {v_idx}: {family_name} ---")
         
-        # 重新从子集字节流加载，保证纯净隔离
         v_font = TTFont(io.BytesIO(subset_bytes))
         glyf = v_font['glyf']
         hmtx = v_font['hmtx']
@@ -266,22 +264,19 @@ def main():
             g = glyf[gname]
             if g.numberOfContours > 0 and not g.isComposite():
                 orig_coords = g.coordinates
-                new_coords = transform_glyph(orig_coords, gname, v_idx)
+                new_coords = transform_glyph_dramatic(orig_coords, gname, v_idx)
                 g.coordinates = new_coords
                 g.recalcBounds(glyf)
                 
-                # 同步更新水平度量表 hmtx 的 lsb
                 adv, _ = hmtx[gname]
                 hmtx[gname] = (adv, g.xMin)
                 modified_count += 1
 
         print(f"Variant {v_idx}: Deformed and recalculated bounds for {modified_count} glyphs.")
 
-        # 更新字体元数据表
         update_name_table(v_font, family_name)
         v_font.flavor = 'woff2'
 
-        # 保存输出文件
         filename = f"myfont-var{v_idx}.woff2"
         for out_dir in out_dirs:
             target_path = os.path.join(out_dir, filename)
@@ -289,7 +284,11 @@ def main():
             size_kb = round(os.path.getsize(target_path) / 1024)
             print(f"Saved: {target_path} ({size_kb} KB)")
 
-    print("\nSUCCESS: All 5 font variants generated cleanly!")
+    # 保存 1000 常用字列表供后续生成 PDF 测试
+    with open('top_1000_common_chars.txt', 'w', encoding='utf-8') as f:
+        f.write(''.join(top_1000))
+    print("\nSaved top_1000_common_chars.txt")
+    print("SUCCESS: All 5 dramatic font variants generated cleanly across all destinations!")
 
 if __name__ == '__main__':
     main()

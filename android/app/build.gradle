@@ -4,7 +4,7 @@ android {
     namespace = "com.whangvjfx.physicstypesetter"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.whangvjfx.physicstypesetter.v2"
+        applicationId "com.whangvjfx.physicstypesetter.nonlinear"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

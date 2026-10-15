@@ -117,34 +117,26 @@ function beautifyRadicals(root) {
  * 严禁使用动态 SVG 注入（html2canvas 无法稳定光栅化零高度行内 SVG 导致分数线缺失）
  * 严格保持零高度包裹，绝不干扰 60px 行高布局
  */
-function beautifyFractionLines(root, nonlinearIntensity = 0.60) {
-  const K = Math.max(0.0, Math.min(1.0, Number(nonlinearIntensity) ?? 0.60));
+function beautifyFractionLines(root) {
   const fracLines = root.querySelectorAll('.katex .frac-line');
   if (!fracLines.length) return;
 
-  fracLines.forEach((fl, idx) => {
+  fracLines.forEach((fl) => {
     // 彻底清除旧版本遗留的 SVG，防止渲染黑块或空节点
     const oldSvg = fl.querySelector('svg');
     if (oldSvg) oldSvg.remove();
     fl.classList.remove('handwritten-frac');
 
-    // 强制设置全平台及 html2canvas 绝对兼容的圆角实体手写分数线
+    // 严禁旋转倾斜，严禁 display: block（html2canvas 下 block 会导致分数线严重下坠压迫分母字符）
+    // 保持原生 inline-block，确保分数线水平、平直、清晰可见且绝对不与分母干涉
     fl.style.setProperty('border-bottom-style', 'solid', 'important');
-    fl.style.setProperty('border-bottom-width', '1.6px', 'important');
+    fl.style.setProperty('border-bottom-width', '1.2px', 'important');
     fl.style.setProperty('border-bottom-color', 'currentColor', 'important');
-    fl.style.setProperty('border-radius', '1.5px', 'important');
-    fl.style.setProperty('opacity', '0.94', 'important');
-    fl.style.setProperty('display', 'block', 'important');
-
-    if (K > 0.05) {
-      // 模拟人手划过草稿纸的极轻微倾斜摆动（严格限制在 ±0.5° 以内，既有真实手写感又不失严谨）
-      const h = hash32(idx, Math.round(fl.offsetWidth || 20), 101, 203) - 0.5;
-      const angle = (h * 1.0 * K).toFixed(2);
-      fl.style.setProperty('transform', `rotate(${angle}deg)`, 'important');
-      fl.style.setProperty('transform-origin', '50% 50%', 'important');
-    } else {
-      fl.style.removeProperty('transform');
-    }
+    fl.style.setProperty('display', 'inline-block', 'important');
+    fl.style.setProperty('opacity', '0.95', 'important');
+    fl.style.removeProperty('border-radius');
+    fl.style.removeProperty('transform');
+    fl.style.removeProperty('transform-origin');
   });
 }
 
@@ -833,8 +825,8 @@ export async function generateTypesetImages({
   // ========== 美化根号为自然手写笔画 ==========
   beautifyRadicals(masterBox);
 
-  // ========== 【V4 手写分数线美化】：真实 CSS 描边与手写微倾（全平台及 html2canvas 绝对可见） ==========
-  beautifyFractionLines(masterBox, nonlinearIntensity);
+  // ========== 【分数线稳定渲染】：水平平直与标准内联显示（全平台及 html2canvas 绝对清晰稳定） ==========
+  beautifyFractionLines(masterBox);
 
   // ========== 【避头尾法则 / 标点防孤行】确保标点符号与前字绑定，绝不出现行首孤点 ==========
   const punctRegex = /^[，。、；：？！,.;:?!’”'”）》〉】〕｝]$/;

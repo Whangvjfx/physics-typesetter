@@ -295,14 +295,13 @@ span.f1.math-sym {
   font-family: 'Caveat', 'HandwritingGreek', cursive !important;
 }
 
-/* 11. 【核心修复】分数线微调：手写轻盈柔和线（圆角微倾，全平台与 html2canvas 绝对可见） */
+/* 11. 【核心修复】分数线：保持原生 inline-block 与水平平直，全平台及 html2canvas 绝对清晰稳定 */
 .katex .frac-line {
   border-bottom-style: solid !important;
-  border-bottom-width: 1.6px !important;
+  border-bottom-width: 1.2px !important;
   border-bottom-color: currentColor !important;
-  border-radius: 1.5px !important;
-  opacity: 0.94;
-  display: block !important;
+  display: inline-block !important;
+  opacity: 0.95;
 }
 
 /* 12. 【核心修复】根号 SVG 柔化与笔墨质感优化 */

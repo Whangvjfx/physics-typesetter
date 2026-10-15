@@ -388,35 +388,17 @@ span.f1.math-sym {
         "const parts = el.querySelectorAll('.katex-html > .base, .katex-html > .tag, .katex-html > .katex-base');"
     )
 
-    # 5. Read typesetter.js functions to replace in desktop HTML
+    # 5. Read typesetter.js functions and replace all rendering logic in desktop HTML
     with open(r"C:\Users\wb686\.gemini\antigravity\scratch\physics-typesetter-nonlinear\src\typesetter.js", 'r', encoding='utf-8') as f:
         ts_code = f.read()
 
-    # Extract beautifyRadicals
     b_start = ts_code.find("function beautifyRadicals")
-    b_end = ts_code.find("function compensateTextZoom")
-    beautify_func_code = ts_code[b_start:b_end].strip()
+    ts_end = ts_code.rfind('}') + 1
+    ts_full_block = ts_code[b_start:ts_end].replace("export async function generateTypesetImages", "async function generateTypesetImages")
 
-    # Extract createNonlinearChineseCharGenerator
-    g_start = ts_code.find("function createNonlinearChineseCharGenerator")
-    g_end = ts_code.find("// 兼容别名")
-    gen_func_code = ts_code[g_start:g_end].strip()
-
-    combined_funcs = beautify_func_code + "\n\n" + gen_func_code
-
-    # In desktop HTML, replace createOrganicChineseCharGenerator
-    old_g_start = content.find("function createOrganicChineseCharGenerator")
-    old_g_end = content.find("async function generateTypesetImages")
-    content = content[:old_g_start] + combined_funcs + "\n\n" + content[old_g_end:]
-
-    # 6. Replace generateTypesetImages implementation in desktop HTML
-    ts_gen_start = ts_code.find("export async function generateTypesetImages")
-    ts_gen_end = ts_code.find("const masterRect = masterBox.getBoundingClientRect();")
-    ts_gen_segment = ts_code[ts_gen_start:ts_gen_end].replace("export async function generateTypesetImages", "async function generateTypesetImages")
-
-    desk_gen_start = content.find("async function generateTypesetImages")
-    desk_gen_end = content.find("const masterRect = masterBox.getBoundingClientRect();")
-    content = content[:desk_gen_start] + ts_gen_segment + content[desk_gen_end:]
+    old_block_start = content.find("function hash32")
+    old_block_end = content.find("// ==========================================================================\n// 主逻辑")
+    content = content[:old_block_start] + ts_full_block + "\n\n" + content[old_block_end:]
 
     # 7. Add JS Slider Hooks & Sample Text
     js_slider_hook = """

@@ -113,7 +113,8 @@ function beautifyRadicals(root) {
 }
 
 /**
- * 【手写贝塞尔分数线美化】将 KaTeX 机械刚性直线替换为自然微翘的手写贝塞尔曲线
+ * 【手写分数线优化】全平台与 html2canvas 绝对可见的真实 CSS 描边与手写微倾
+ * 严禁使用动态 SVG 注入（html2canvas 无法稳定光栅化零高度行内 SVG 导致分数线缺失）
  * 严格保持零高度包裹，绝不干扰 60px 行高布局
  */
 function beautifyFractionLines(root, nonlinearIntensity = 0.60) {
@@ -122,51 +123,28 @@ function beautifyFractionLines(root, nonlinearIntensity = 0.60) {
   if (!fracLines.length) return;
 
   fracLines.forEach((fl, idx) => {
-    const oldSvg = fl.querySelector('svg.handwritten-frac-svg');
+    // 彻底清除旧版本遗留的 SVG，防止渲染黑块或空节点
+    const oldSvg = fl.querySelector('svg');
     if (oldSvg) oldSvg.remove();
+    fl.classList.remove('handwritten-frac');
 
-    if (K <= 0.05) {
-      fl.classList.remove('handwritten-frac');
-      return;
+    // 强制设置全平台及 html2canvas 绝对兼容的圆角实体手写分数线
+    fl.style.setProperty('border-bottom-style', 'solid', 'important');
+    fl.style.setProperty('border-bottom-width', '1.6px', 'important');
+    fl.style.setProperty('border-bottom-color', 'currentColor', 'important');
+    fl.style.setProperty('border-radius', '1.5px', 'important');
+    fl.style.setProperty('opacity', '0.94', 'important');
+    fl.style.setProperty('display', 'block', 'important');
+
+    if (K > 0.05) {
+      // 模拟人手划过草稿纸的极轻微倾斜摆动（严格限制在 ±0.5° 以内，既有真实手写感又不失严谨）
+      const h = hash32(idx, Math.round(fl.offsetWidth || 20), 101, 203) - 0.5;
+      const angle = (h * 1.0 * K).toFixed(2);
+      fl.style.setProperty('transform', `rotate(${angle}deg)`, 'important');
+      fl.style.setProperty('transform-origin', '50% 50%', 'important');
+    } else {
+      fl.style.removeProperty('transform');
     }
-
-    fl.classList.add('handwritten-frac');
-
-    let width = fl.offsetWidth;
-    if (!width || width < 4) {
-      const parentRect = fl.parentElement ? fl.parentElement.getBoundingClientRect() : null;
-      width = parentRect && parentRect.width > 4 ? parentRect.width : 28;
-    }
-
-    const h1 = hash32(idx, Math.round(width), 101, 203) - 0.5;
-    const h2 = hash32(idx, Math.round(width), 307, 409) - 0.5;
-    const h3 = hash32(idx, Math.round(width), 521, 613) - 0.5;
-
-    const y0 = (4 + h1 * 0.7 * K).toFixed(2);
-    const y1 = (4 + h2 * 0.9 * K).toFixed(2);
-    const midX = (width * (0.48 + h3 * 0.08)).toFixed(2);
-    const midY = (4 + (h3 * 1.1 - 0.2) * K).toFixed(2);
-
-    const strokeW = (1.35 + Math.abs(h1) * 0.25).toFixed(2);
-
-    const svgNS = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('class', 'handwritten-frac-svg');
-    svg.setAttribute('viewBox', `0 0 ${Math.ceil(width)} 8`);
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.style.cssText = 'position:absolute; left:0; top:-3px; width:100%; height:8px; overflow:visible !important; pointer-events:none;';
-
-    const path = document.createElementNS(svgNS, 'path');
-    path.setAttribute('d', `M 0,${y0} Q ${midX},${midY} ${width},${y1}`);
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', 'currentColor');
-    path.setAttribute('stroke-width', strokeW);
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
-    path.style.opacity = '0.94';
-
-    svg.appendChild(path);
-    fl.appendChild(svg);
   });
 }
 
@@ -855,8 +833,26 @@ export async function generateTypesetImages({
   // ========== 美化根号为自然手写笔画 ==========
   beautifyRadicals(masterBox);
 
-  // ========== 【V4 手写贝塞尔分数线】：将生硬刚性直线替换为轻盈手写线 ==========
+  // ========== 【V4 手写分数线美化】：真实 CSS 描边与手写微倾（全平台及 html2canvas 绝对可见） ==========
   beautifyFractionLines(masterBox, nonlinearIntensity);
+
+  // ========== 【避头尾法则 / 标点防孤行】确保标点符号与前字绑定，绝不出现行首孤点 ==========
+  const punctRegex = /^[，。、；：？！,.;:?!’”'”）》〉】〕｝]$/;
+  const spans = Array.from(masterBox.querySelectorAll('span.f1'));
+  for (let i = 1; i < spans.length; i++) {
+    const text = spans[i].textContent.trim();
+    if (punctRegex.test(text)) {
+      const prev = spans[i - 1];
+      if (prev.parentElement && !prev.parentElement.classList.contains('kinsoku-wrap')) {
+        const wrapper = document.createElement('span');
+        wrapper.className = 'kinsoku-wrap';
+        wrapper.style.cssText = 'white-space: nowrap !important; display: inline !important;';
+        prev.parentNode.insertBefore(wrapper, prev);
+        wrapper.appendChild(prev);
+        wrapper.appendChild(spans[i]);
+      }
+    }
+  }
 
   // ========== 【V4 纸张纤维微洇】：注入微观纸张物理质感 SVG 滤镜 ==========
   ensureInkBleedFilter(captureZone, nonlinearIntensity);

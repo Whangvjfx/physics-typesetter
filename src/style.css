@@ -1186,28 +1186,14 @@ span.f1.math-sym {
   font-family: 'Caveat', 'HandwritingGreek', cursive !important;
 }
 
-/* 11. 【核心修复】分数线微调：手写轻盈柔和线与自然贝塞尔手写线 */
+/* 11. 【核心修复】分数线微调：手写轻盈柔和线（圆角微倾，全平台与 html2canvas 绝对可见） */
 .katex .frac-line {
   border-bottom-style: solid !important;
-  border-bottom-width: 1.4px !important;
-  border-radius: 1px !important;
-  opacity: 0.95;
-  position: relative;
-}
-
-.katex .frac-line.handwritten-frac {
-  border-bottom-color: transparent !important;
-  border-bottom-style: none !important;
-}
-
-.katex .frac-line svg.handwritten-frac-svg {
-  position: absolute;
-  top: -3px;
-  left: 0;
-  width: 100%;
-  height: 8px;
-  overflow: visible !important;
-  pointer-events: none;
+  border-bottom-width: 1.6px !important;
+  border-bottom-color: currentColor !important;
+  border-radius: 1.5px !important;
+  opacity: 0.94;
+  display: block !important;
 }
 
 /* 12. 【核心修复】根号 SVG 柔化与笔墨质感优化 */

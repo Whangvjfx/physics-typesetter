@@ -77,6 +77,46 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'MyHandwriting-Var1';
+  src: url('/fonts/myfont-var1.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MyHandwriting-Var2';
+  src: url('/fonts/myfont-var2.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MyHandwriting-Var3';
+  src: url('/fonts/myfont-var3.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MyHandwriting-Var4';
+  src: url('/fonts/myfont-var4.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MyHandwriting-Var5';
+  src: url('/fonts/myfont-var5.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ==========================================================================
    2. 主题变量定义：黑夜模式 (Dark) 与 清爽绿意白天模式 (Light)
    ========================================================================== */
@@ -1037,6 +1077,26 @@ span.f1 {
   color: inherit;
 }
 
+/* 6 套微姿态变体字形映射类，含完整降级回退链 (Caveat -> HandwritingGreek -> MyHandwriting-VarN -> MyHandwriting -> 楷体) */
+span.f1.glyph-v0 {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+}
+span.f1.glyph-v1 {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting-Var1', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+}
+span.f1.glyph-v2 {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting-Var2', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+}
+span.f1.glyph-v3 {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting-Var3', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+}
+span.f1.glyph-v4 {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting-Var4', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+}
+span.f1.glyph-v5 {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting-Var5', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+}
+
 /* 物理数学特定运算符与符号（如 ≠, ≤, ≥, ±, ×, ÷, ≈ 等）：优先采用手写字体，没有的再 fallback 原生符号字体 */
 span.f1.math-sym {
   font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', 'KaTeX_Main', sans-serif !important;
@@ -1126,12 +1186,28 @@ span.f1.math-sym {
   font-family: 'Caveat', 'HandwritingGreek', cursive !important;
 }
 
-/* 11. 【核心修复】分数线微调：手写轻盈柔和线 */
+/* 11. 【核心修复】分数线微调：手写轻盈柔和线与自然贝塞尔手写线 */
 .katex .frac-line {
   border-bottom-style: solid !important;
   border-bottom-width: 1.4px !important;
   border-radius: 1px !important;
   opacity: 0.95;
+  position: relative;
+}
+
+.katex .frac-line.handwritten-frac {
+  border-bottom-color: transparent !important;
+  border-bottom-style: none !important;
+}
+
+.katex .frac-line svg.handwritten-frac-svg {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  overflow: visible !important;
+  pointer-events: none;
 }
 
 /* 12. 【核心修复】根号 SVG 柔化与笔墨质感优化 */

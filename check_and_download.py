@@ -129,7 +129,8 @@ def main():
     # 4. Deliver to Desktop locations
     targets = [
         r"C:\Users\wb686\Desktop\PhysicsTypesetter-Nonlinear.ipa",
-        r"C:\Users\wb686\Desktop\非线性\PhysicsTypesetter-Nonlinear.ipa"
+        r"C:\Users\wb686\Desktop\非线性\PhysicsTypesetter-Nonlinear.ipa",
+        r"C:\Users\wb686\Desktop\非线性_V4_Pro\PhysicsTypesetter-Nonlinear.ipa"
     ]
 
     for t in targets:

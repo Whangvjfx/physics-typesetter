@@ -113,6 +113,190 @@ function beautifyRadicals(root) {
 }
 
 /**
+ * 【手写贝塞尔分数线美化】将 KaTeX 机械刚性直线替换为自然微翘的手写贝塞尔曲线
+ * 严格保持零高度包裹，绝不干扰 60px 行高布局
+ */
+function beautifyFractionLines(root, nonlinearIntensity = 0.60) {
+  const K = Math.max(0.0, Math.min(1.0, Number(nonlinearIntensity) ?? 0.60));
+  const fracLines = root.querySelectorAll('.katex .frac-line');
+  if (!fracLines.length) return;
+
+  fracLines.forEach((fl, idx) => {
+    const oldSvg = fl.querySelector('svg.handwritten-frac-svg');
+    if (oldSvg) oldSvg.remove();
+
+    if (K <= 0.05) {
+      fl.classList.remove('handwritten-frac');
+      return;
+    }
+
+    fl.classList.add('handwritten-frac');
+
+    let width = fl.offsetWidth;
+    if (!width || width < 4) {
+      const parentRect = fl.parentElement ? fl.parentElement.getBoundingClientRect() : null;
+      width = parentRect && parentRect.width > 4 ? parentRect.width : 28;
+    }
+
+    const h1 = hash32(idx, Math.round(width), 101, 203) - 0.5;
+    const h2 = hash32(idx, Math.round(width), 307, 409) - 0.5;
+    const h3 = hash32(idx, Math.round(width), 521, 613) - 0.5;
+
+    const y0 = (4 + h1 * 0.7 * K).toFixed(2);
+    const y1 = (4 + h2 * 0.9 * K).toFixed(2);
+    const midX = (width * (0.48 + h3 * 0.08)).toFixed(2);
+    const midY = (4 + (h3 * 1.1 - 0.2) * K).toFixed(2);
+
+    const strokeW = (1.35 + Math.abs(h1) * 0.25).toFixed(2);
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('class', 'handwritten-frac-svg');
+    svg.setAttribute('viewBox', `0 0 ${Math.ceil(width)} 8`);
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.style.cssText = 'position:absolute; left:0; top:-3px; width:100%; height:8px; overflow:visible !important; pointer-events:none;';
+
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('d', `M 0,${y0} Q ${midX},${midY} ${width},${y1}`);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', strokeW);
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.style.opacity = '0.94';
+
+    svg.appendChild(path);
+    fl.appendChild(svg);
+  });
+}
+
+/**
+ * 【行级宏观书写流与行尾挤压】(Macro Line Flow & Right-Margin Cramping)
+ * 1. 计算视觉行并在行内沿推进方向施加低频连贯基线微波 (振幅严格 <= 2.0px)
+ * 2. 行尾边界心理挤压 (t > 0.82 渐进式微缩字距与展弦比，模拟人手临近右边界时的紧缩感)
+ * 严格保持 zero layout box impact，所有偏移仅通过 transform 与 margin 实现，绝不改动 60px 行高
+ */
+function applyMacroLineDynamics(root, nonlinearIntensity = 0.60) {
+  const K = Math.max(0.0, Math.min(1.0, Number(nonlinearIntensity) ?? 0.60));
+  if (K <= 0.05) return;
+
+  const chars = Array.from(root.querySelectorAll('.organic-char'));
+  if (chars.length < 2) return;
+
+  const rootRect = root.getBoundingClientRect();
+  const charData = chars.map(el => {
+    const r = el.getBoundingClientRect();
+    return {
+      el,
+      left: r.left - rootRect.left,
+      top: r.top - rootRect.top,
+      width: r.width,
+      height: r.height
+    };
+  });
+
+  charData.sort((a, b) => a.top - b.top || a.left - b.left);
+
+  const lines = [];
+  let currentLine = [];
+  let currentLineTop = -9999;
+
+  charData.forEach(item => {
+    if (Math.abs(item.top - currentLineTop) > 20) {
+      if (currentLine.length > 0) {
+        currentLine.sort((a, b) => a.left - b.left);
+        lines.push(currentLine);
+      }
+      currentLine = [item];
+      currentLineTop = item.top;
+    } else {
+      currentLine.push(item);
+    }
+  });
+  if (currentLine.length > 0) {
+    currentLine.sort((a, b) => a.left - b.left);
+    lines.push(currentLine);
+  }
+
+  lines.forEach((lineChars, lineIdx) => {
+    if (lineChars.length < 3) return;
+
+    const minX = lineChars[0].left;
+    const maxX = lineChars[lineChars.length - 1].left;
+    const lineWidth = Math.max(80, maxX - minX);
+
+    const theta1 = (lineIdx * 1.73 + 0.5) % (Math.PI * 2);
+    const theta2 = (lineIdx * 2.41 + 1.2) % (Math.PI * 2);
+
+    lineChars.forEach(item => {
+      const t = Math.max(0.0, Math.min(1.0, (item.left - minX) / lineWidth));
+
+      const rawWave = 1.2 * Math.sin(Math.PI * t + theta1) + 0.6 * Math.sin(2 * Math.PI * t + theta2);
+      const deltaYWave = Math.max(-2.0, Math.min(2.0, rawWave * K));
+
+      let crampScaleX = 1.0;
+      let crampMarginR = 0.0;
+      if (t > 0.82) {
+        const u = (t - 0.82) / 0.18;
+        crampMarginR = - (0.85 * K * u);
+        crampScaleX = 1.0 - (0.045 * K * u);
+      }
+
+      const existingTransform = item.el.style.transform || '';
+      let newTransform = existingTransform;
+      if (existingTransform.includes('translateY(')) {
+        newTransform = existingTransform.replace(/translateY\(([-0-9.]+)px\)/, (match, val) => {
+          const combinedY = (parseFloat(val) + deltaYWave).toFixed(2);
+          return `translateY(${combinedY}px)`;
+        });
+      } else {
+        newTransform += ` translateY(${deltaYWave.toFixed(2)}px)`;
+      }
+
+      if (crampScaleX < 0.999) {
+        newTransform += ` scaleX(${crampScaleX.toFixed(3)})`;
+      }
+
+      item.el.style.transform = newTransform;
+
+      if (crampMarginR < -0.01) {
+        const curMR = parseFloat(item.el.style.marginRight) || 0;
+        item.el.style.marginRight = (curMR + crampMarginR).toFixed(2) + 'px';
+      }
+    });
+  });
+}
+
+/**
+ * 【纸张纤维毛细墨迹扩散滤镜】微观纸张物理质感
+ */
+function ensureInkBleedFilter(container, nonlinearIntensity = 0.60) {
+  const K = Math.max(0.0, Math.min(1.0, Number(nonlinearIntensity) ?? 0.60));
+  let filterSvg = document.getElementById('ink-bleed-defs');
+  if (K <= 0.05) {
+    if (filterSvg) filterSvg.remove();
+    return;
+  }
+  if (!filterSvg) {
+    filterSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    filterSvg.id = 'ink-bleed-defs';
+    filterSvg.style.cssText = 'position:absolute; width:0; height:0; overflow:hidden; pointer-events:none;';
+    filterSvg.innerHTML = `
+      <defs>
+        <filter id="handwriting-ink-bleed" x="-10%" y="-10%" width="120%" height="120%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="${(0.32 * K).toFixed(2)}" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
+    `;
+    container.insertBefore(filterSvg, container.firstChild);
+  } else {
+    const disp = filterSvg.querySelector('feDisplacementMap');
+    if (disp) disp.setAttribute('scale', (0.32 * K).toFixed(2));
+  }
+}
+
+/**
  * 【第二道保险】检测 WebView 文字缩放
  */
 function compensateTextZoom() {
@@ -214,6 +398,8 @@ function hash32(a, b, c, d) {
 function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
   const K = Math.max(0.0, Math.min(1.0, Number(nonlinearIntensity) ?? 0.60));
   const charOccurMap = new Map();
+  const charTabuMap = new Map();   // 单字历史禁忌队列 (容量 4)
+  const globalRecentQueue = [];     // 全局紧邻字形禁忌队列 (容量 3)
   let chineseCharSeq = 0;
   let charInClause = 0;
   let prevChar = '';
@@ -284,23 +470,16 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
       // 2. 【叠字与重字书法异构呼应】若紧邻相同字或相近重现，注入互补反相偏移，但受平滑容差约束
       const isRepeat = (char === prevChar) || (count > 0);
       if (isRepeat) {
-        // 偏向相反的 3D 梯形俯仰态（如前字偏俯势，当前字微仰势，相映成趣）
         targetRotX = -targetRotX * 0.75;
         targetRotY = -targetRotY * 0.75;
-        // 平面旋转角互补反相偏移（但限制在受控容差内，既有不同姿态，又顺势自然）
         targetRotZ = rotZBase - (targetRotZ - rotZBase) * 0.60;
-        // 宽扁与修长互补转化 (幅度收紧，杜绝过扁或过窄)
         targetAspect = 1.0 - (targetAspect - 1.0) * 0.65;
-        // 支点互补漂移
         targetOx = 100 - targetOx;
         targetOy = 100 - targetOy;
-        // 尺寸微调（严格限制在 0.012 以内，杜绝大小突变）
         targetSize += (count % 2 === 1 ? 0.012 : -0.012) * K;
       }
 
       // 3. 【一阶惯性动量阻尼更新】(Physical Inertia Damper)
-      // 尺寸与展弦比采用高阻尼 0.75，牢牢锁住大小极值，杜绝大小突变；
-      // 旋转角采用 0.58 适度动量阻尼，既保留手腕运动的连续性，又能淋漓尽致展现旋转动态！
       const alphaSize = 0.75;
       const alphaRot = 0.58;
       const rawSize = state.size * alphaSize + targetSize * (1 - alphaSize);
@@ -320,8 +499,6 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
       state.rotX = clampDelta(rawRotX, state.rotX, 2.2 + 1.8 * K);
       state.rotY = clampDelta(rawRotY, state.rotY, 1.8 + 1.4 * K);
 
-      // 【核心物理约束：相近的字转动角度不得差过大】
-      // 限制相邻两字单步旋转角最大差值：K=1.0 时单步最大变化为 2.2°~2.4°，K=0.6 时约 1.5°~1.8°，K=0 时为 0°
       const maxStepRotZ = 2.4 * K;
       state.rotZ = clampDelta(rawRotZ, state.rotZ, maxStepRotZ);
       state.skew = clampDelta(rawSkew, state.skew, 0.6 + 0.4 * K);
@@ -330,18 +507,16 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
       state.pDist = clampDelta(rawPDist, state.pDist, 10 + 10 * K);
       state.pressure = Math.max(0.82, Math.min(1.05, clampDelta(rawPressure, state.pressure, 0.03)));
 
-      // 4.1 【极值硬性区间锁定】：严格压缩最大字与最小字的大小差距极值，杜绝过大或过小
-      const maxDeltaSize = 0.048 * (0.6 + 0.4 * K); // 偏离基准尺寸最大不超过 ±4.8%
+      // 4.1 【极值硬性区间锁定】：严格压缩最大字与最小字的大小差距极值
+      const maxDeltaSize = 0.048 * (0.6 + 0.4 * K);
       state.size = Math.max(1.0 - maxDeltaSize, Math.min(1.0 + maxDeltaSize, state.size));
 
-      const maxDeltaAspect = 0.072 * (0.6 + 0.4 * K); // 偏离基准展弦比最大不超过 ±7.2%
+      const maxDeltaAspect = 0.072 * (0.6 + 0.4 * K);
       state.aspect = Math.max(1.0 - maxDeltaAspect, Math.min(1.0 + maxDeltaAspect, state.aspect));
 
       prevChar = char;
 
-      // 5. 【视觉面积守恒伸缩计算】：
-      // scaleX = size * sqrt(aspect), scaleY = size / sqrt(aspect)
-      // 保证字形在宽扁与挺拔变换时视觉量感守恒，杜绝骤然暴增或骤然缩水！
+      // 5. 【视觉面积守恒伸缩计算】
       const sqrtA = Math.sqrt(state.aspect);
       const finalScaleX = (state.size * sqrtA).toFixed(3);
       const finalScaleY = (state.size / sqrtA).toFixed(3);
@@ -363,8 +538,69 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
       const marginR = (Math.sin(seq * 0.4 + 0.2) * (0.8 + 0.6 * K)).toFixed(2);
       const marginL = (Math.cos(seq * 0.4 + 0.8) * (0.4 + 0.4 * K)).toFixed(2);
 
-      // 8. 笔墨深浅浓淡与渗透 (受 state.pressure 平滑驱动)
-      const opacity = Math.min(1.0, 0.86 + state.pressure * 0.14).toFixed(2);
+      // ========== 【Phase 2：禁忌队列字形状态机 (Tabu-Queue Glyph Engine)】 ==========
+      let variantIndex = 0;
+      if (K > 0.05) {
+        const charTabu = charTabuMap.get(char) || [];
+        const allVariants = [0, 1, 2, 3, 4, 5];
+
+        // 1. 过滤单字历史禁忌（容量 4）
+        let candidates = allVariants.filter(v => !charTabu.includes(v));
+        if (candidates.length === 0) candidates = allVariants;
+
+        // 2. 避免紧邻字重复相同变体（容量 3）
+        if (candidates.length > 1 && globalRecentQueue.length > 0) {
+          const lastGlobal = globalRecentQueue[globalRecentQueue.length - 1];
+          const nonAdjacent = candidates.filter(v => v !== lastGlobal);
+          if (nonAdjacent.length > 0) candidates = nonAdjacent;
+        }
+
+        // 3. 运笔动量与微姿态偏置加权 (Kinesthetic Persona Bias)
+        // v0: 标准基础态, v1: 修长聚心, v2: 扁阔舒展, v3: 左敛右扬, v4: 内紧外松, v5: 疾书连贯
+        const weights = candidates.map(v => {
+          let w = 1.0;
+          if (v === 3 || v === 5) {
+            if (Math.abs(state.rotZ) > 3.0 * K || Math.abs(state.skew) > 1.2 * K) {
+              w += 0.8 * K;
+            }
+          }
+          if (v === 2 && state.aspect > 1.02) w += 0.7 * K;
+          if (v === 1 && state.aspect < 0.98) w += 0.7 * K;
+          if (v === 4 && state.pressure > 0.96) w += 0.6 * K;
+          if (v === 0 && Math.abs(state.rotZ) < 2.0 * K) w += 0.5;
+          return w;
+        });
+
+        // 确定性伪随机采样
+        const totalWeight = weights.reduce((acc, val) => acc + val, 0);
+        const randVal = hash32(char.charCodeAt(0), seq, count, Math.round(state.rotZ * 100)) * totalWeight;
+        let cumulative = 0;
+        variantIndex = candidates[0];
+        for (let idx = 0; idx < candidates.length; idx++) {
+          cumulative += weights[idx];
+          if (randVal <= cumulative) {
+            variantIndex = candidates[idx];
+            break;
+          }
+        }
+
+        // 更新禁忌队列
+        charTabu.push(variantIndex);
+        if (charTabu.length > 4) charTabu.shift();
+        charTabuMap.set(char, charTabu);
+
+        globalRecentQueue.push(variantIndex);
+        if (globalRecentQueue.length > 3) globalRecentQueue.shift();
+      }
+
+      // ========== 【Phase 5：笔画动力学运笔速度与微观笔墨纸张质感】 ==========
+      const dRot = Math.abs(rawRotZ - state.rotZ);
+      const dAspect = Math.abs(rawAspect - state.aspect);
+      const dSize = Math.abs(rawSize - state.size);
+      const strokeVel = Math.min(2.5, Math.sqrt(dRot * dRot * 2.0 + dAspect * dAspect * 200 + dSize * dSize * 200));
+
+      const velInkFactor = (1.0 - strokeVel * 0.04 * K);
+      const opacity = Math.min(1.0, Math.max(0.88, (0.86 + state.pressure * 0.14) * velInkFactor)).toFixed(2);
 
       let strokeCSS = '';
       const currentStroke = (0.04 + (state.pressure - 0.90) * 0.15) * (0.5 + 0.5 * K);
@@ -372,13 +608,15 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
         strokeCSS = `-webkit-text-stroke: ${currentStroke.toFixed(2)}px currentColor;`;
       }
 
-      const shadowDx = (Math.sin(seq * 0.3) * 0.25 * K).toFixed(2);
-      const shadowDy = (Math.cos(seq * 0.3) * 0.25 * K).toFixed(2);
+      const shadowDx = (Math.sin(seq * 0.3) * 0.22 * K).toFixed(2);
+      const shadowDy = (Math.cos(seq * 0.3) * 0.22 * K).toFixed(2);
+      const shadowBlur1 = (0.38 + (1.05 - state.pressure) * 0.12).toFixed(2);
+      const shadowBlur2 = (0.85 + (state.pressure - 0.90) * 0.25).toFixed(2);
       let shadowCSS = '';
       if (isHighlight) {
-        shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px 0.40px rgba(211, 47, 47, 0.52), 0 0 0.80px rgba(211, 47, 47, 0.16);`;
+        shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px ${shadowBlur1}px rgba(211, 47, 47, 0.52), 0 0 ${shadowBlur2}px rgba(211, 47, 47, 0.16);`;
       } else {
-        shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px 0.40px rgba(18, 20, 24, 0.45), 0 0 0.80px rgba(18, 20, 24, 0.14);`;
+        shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px ${shadowBlur1}px rgba(18, 20, 24, 0.46), 0 0 ${shadowBlur2}px rgba(18, 20, 24, 0.15);`;
       }
 
       let colorCSS = '';
@@ -400,7 +638,8 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
         transform = `transform: translateY(${deltaY}px) rotate(${finalRotZ}deg) scale(${finalScaleX}, ${finalScaleY}) skewX(${finalSkewX}deg);`;
       }
 
-      return `<span class="f1 organic-char" style="display:inline-block; vertical-align:baseline; font-size:1.5em; line-height:21px !important; margin-right:${marginR}px; margin-left:${marginL}px; opacity:${opacity}; ${colorCSS} ${strokeCSS} ${shadowCSS} ${originCSS} ${transform}">${char}</span>`;
+      const glyphClass = `glyph-v${variantIndex}`;
+      return `<span class="f1 organic-char ${glyphClass}" style="display:inline-block; vertical-align:baseline; font-size:1.5em; line-height:21px !important; margin-right:${marginR}px; margin-left:${marginL}px; opacity:${opacity}; ${colorCSS} ${strokeCSS} ${shadowCSS} ${originCSS} ${transform}">${char}</span>`;
     }
   };
 }
@@ -616,6 +855,12 @@ export async function generateTypesetImages({
   // ========== 美化根号为自然手写笔画 ==========
   beautifyRadicals(masterBox);
 
+  // ========== 【V4 手写贝塞尔分数线】：将生硬刚性直线替换为轻盈手写线 ==========
+  beautifyFractionLines(masterBox, nonlinearIntensity);
+
+  // ========== 【V4 纸张纤维微洇】：注入微观纸张物理质感 SVG 滤镜 ==========
+  ensureInkBleedFilter(captureZone, nonlinearIntensity);
+
   // 强制等待网络与本地字体加载完毕并留出绘制时间
   await document.fonts.ready;
   let fontWaitCount = 0;
@@ -647,6 +892,9 @@ export async function generateTypesetImages({
       el.style.padding = '0px !important';
     }
   });
+
+  // ========== 【V4 行级宏观书写流与行尾挤压】：低频基线波与边界心理紧缩 ==========
+  applyMacroLineDynamics(masterBox, nonlinearIntensity);
 
   const masterRect = masterBox.getBoundingClientRect();
 

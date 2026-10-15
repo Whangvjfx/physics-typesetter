@@ -14,7 +14,7 @@ def generate():
     content = content.replace("📐 A4手写", "🌀 非线性")
     content = content.replace("【真手写V2副本已激活】", "【非线性动力学引擎已就绪】")
 
-    # 2. Add Greek @font-face rules & Nonlinear CSS
+    # 2. Add Greek & Variant @font-face rules & Nonlinear CSS
     greek_font_faces = """
 @font-face {
   font-family: 'HandwritingGreek';
@@ -54,6 +54,66 @@ def generate():
   font-style: normal;
   font-display: swap;
   unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F;
+}
+
+@font-face {
+  font-family: 'MyHandwriting-Var1';
+  src: url('./fonts/myfont-var1.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MyHandwriting-Var2';
+  src: url('./fonts/myfont-var2.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MyHandwriting-Var3';
+  src: url('./fonts/myfont-var3.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MyHandwriting-Var4';
+  src: url('./fonts/myfont-var4.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MyHandwriting-Var5';
+  src: url('./fonts/myfont-var5.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 6 套微姿态变体字形映射类，含完整降级回退链 */
+span.f1.glyph-v0 {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+}
+span.f1.glyph-v1 {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting-Var1', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+}
+span.f1.glyph-v2 {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting-Var2', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+}
+span.f1.glyph-v3 {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting-Var3', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+}
+span.f1.glyph-v4 {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting-Var4', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
+}
+span.f1.glyph-v5 {
+  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting-Var5', 'MyHandwriting', "KaiTi", "楷体", "STKaiti", "华文楷体", serif !important;
 }
 
 /* 非线性专属滑块外观与预设按钮 */
@@ -235,12 +295,28 @@ span.f1.math-sym {
   font-family: 'Caveat', 'HandwritingGreek', cursive !important;
 }
 
-/* 11. 【核心修复】分数线微调：手写轻盈柔和线 */
+/* 11. 【核心修复】分数线微调：手写轻盈柔和线与自然贝塞尔手写线 */
 .katex .frac-line {
   border-bottom-style: solid !important;
   border-bottom-width: 1.4px !important;
   border-radius: 1px !important;
   opacity: 0.95;
+  position: relative;
+}
+
+.katex .frac-line.handwritten-frac {
+  border-bottom-color: transparent !important;
+  border-bottom-style: none !important;
+}
+
+.katex .frac-line svg.handwritten-frac-svg {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  overflow: visible !important;
+  pointer-events: none;
 }
 
 /* 12. 【核心修复】根号 SVG 柔化与笔墨质感优化 */
@@ -421,11 +497,15 @@ presetBtns.forEach(btn => {
     # 9. 纸张底色全面白皙化 (由偏黄 #fbf9f4 升级为纯白答题纸质感 #fdfdfe)
     content = content.replace("#fbf9f4", "#fdfdfe")
 
-    os.makedirs(os.path.dirname(dest_html), exist_ok=True)
-    with open(dest_html, 'w', encoding='utf-8') as f:
-        f.write(content)
-
-    print(f"Generated {dest_html} ({os.path.getsize(dest_html)} bytes)")
+    dest_dirs = [
+        r"C:\Users\wb686\Desktop\非线性\物理排版-非线性体验.html",
+        r"C:\Users\wb686\Desktop\非线性_V4_Pro\物理排版-非线性体验.html"
+    ]
+    for d_path in dest_dirs:
+        os.makedirs(os.path.dirname(d_path), exist_ok=True)
+        with open(d_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"Generated {d_path} ({os.path.getsize(d_path)} bytes)")
 
 if __name__ == '__main__':
     generate()

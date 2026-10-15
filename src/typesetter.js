@@ -514,19 +514,51 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
         const charTabu = charTabuMap.get(char) || [];
         const allVariants = [0, 1, 2, 3, 4, 5];
 
-        // 1. 过滤单字历史禁忌（容量 4）
+        // 1. 过滤单字历史禁忌（容量扩大至 5，确保连续 6 次出现 100% 变体各不相同）
         let candidates = allVariants.filter(v => !charTabu.includes(v));
-        if (candidates.length === 0) candidates = allVariants;
+        if (candidates.length === 0) {
+          const lastUsed = charTabu[charTabu.length - 1];
+          candidates = allVariants.filter(v => v !== lastUsed);
+          charTabu.length = 0;
+          charTabu.push(lastUsed);
+        }
 
-        // 2. 避免紧邻字重复相同变体（容量 3）
+        // 2. 避免紧邻上一个字符重复相同变体（防止相邻不同字也呈现相同姿态）
         if (candidates.length > 1 && globalRecentQueue.length > 0) {
           const lastGlobal = globalRecentQueue[globalRecentQueue.length - 1];
           const nonAdjacent = candidates.filter(v => v !== lastGlobal);
           if (nonAdjacent.length > 0) candidates = nonAdjacent;
         }
 
-        // 3. 运笔动量与微姿态偏置加权 (Kinesthetic Persona Bias)
-        // v0: 标准基础态, v1: 修长聚心, v2: 扁阔舒展, v3: 左敛右扬, v4: 内紧外松, v5: 疾书连贯
+        // 3. 【绝对防重铁律】：同字上一次出现的变体绝对禁止使用
+        if (charTabu.length > 0) {
+          const lastUsedForThisChar = charTabu[charTabu.length - 1];
+          const strictlyDifferent = candidates.filter(v => v !== lastUsedForThisChar);
+          if (strictlyDifferent.length > 0) {
+            candidates = strictlyDifferent;
+          }
+        }
+
+        // 4. 【紧邻叠字强反差】：若紧挨着的两字相同（如“的的”、“大大”），强制选用形态对比最强烈的变体
+        if (char === prevChar && charTabu.length > 0) {
+          const lastVar = charTabu[charTabu.length - 1];
+          // 形态互补反差映射：1(瘦长) <-> 2(扁阔), 3(右倾) <-> 4(左倾S曲), 5(耸肩) <-> 0(原正)
+          const contrastMap = {
+            1: [2, 3, 4],
+            2: [1, 3, 5],
+            3: [4, 1, 2],
+            4: [3, 2, 5],
+            5: [0, 1, 2],
+            0: [3, 5, 2]
+          };
+          const preferred = contrastMap[lastVar] || [1, 2, 3, 4, 5];
+          const highContrastCandidates = candidates.filter(v => preferred.includes(v));
+          if (highContrastCandidates.length > 0) {
+            candidates = highContrastCandidates;
+          }
+        }
+
+        // 5. 运笔动量与微姿态偏置加权采样 (Kinesthetic Persona Bias)
         const weights = candidates.map(v => {
           let w = 1.0;
           if (v === 3 || v === 5) {
@@ -554,9 +586,9 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
           }
         }
 
-        // 更新禁忌队列
+        // 更新单字禁忌队列（容量 5）
         charTabu.push(variantIndex);
-        if (charTabu.length > 4) charTabu.shift();
+        if (charTabu.length > 5) charTabu.shift();
         charTabuMap.set(char, charTabu);
 
         globalRecentQueue.push(variantIndex);

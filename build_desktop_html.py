@@ -340,6 +340,46 @@ span.f1.math-sym {
 .sliced-content .highlight * {
   color: #d32f2f !important;
 }
+
+.page-container {
+  width: 800px !important;
+  min-width: 800px !important;
+  max-width: 800px !important;
+  box-sizing: border-box !important;
+  padding: 40px !important;
+}
+
+.custom-box {
+  width: 720px !important;
+  min-width: 720px !important;
+  max-width: 720px !important;
+  box-sizing: border-box !important;
+}
+
+.ans-box,
+.exp-box {
+  width: 720px !important;
+  min-width: 720px !important;
+  max-width: 720px !important;
+  padding: 0 20px !important;
+  box-sizing: border-box !important;
+}
+
+.ruled-content {
+  width: 678px !important;
+  min-width: 678px !important;
+  max-width: 678px !important;
+  box-sizing: border-box !important;
+}
+
+.content-wrapper,
+.sliced-content,
+#master-box {
+  width: 678px !important;
+  min-width: 678px !important;
+  max-width: 678px !important;
+  box-sizing: border-box !important;
+}
 """
     myfont_idx = content.find("font-family: 'MyHandwriting'")
     if myfont_idx != -1:

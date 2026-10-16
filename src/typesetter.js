@@ -930,11 +930,13 @@ export async function generateTypesetImages({
 
   // 强制显式预加载与解码全部 6 套变体中文字体族、西文手写体与希腊体，杜绝 html2canvas 异步绘制时字形回退降级为同一基准字体
   await preloadHandwritingFonts();
+  await document.fonts.ready;
   let fontWaitCount = 0;
-  while ((!document.fonts.check('21px MyHandwriting-Var1') || !document.fonts.check('21px MyHandwriting-Var2')) && fontWaitCount < 20) {
+  while ((!document.fonts.check('21px MyHandwriting-Var1') || !document.fonts.check('21px MyHandwriting-Var2') || !document.fonts.check('21px MyHandwriting-Var4')) && fontWaitCount < 20) {
     await new Promise(r => setTimeout(r, 100));
     fontWaitCount++;
   }
+  await document.fonts.ready;
   await new Promise(resolve => setTimeout(resolve, 200));
 
   masterBox.querySelectorAll('img').forEach(img => {
@@ -965,14 +967,22 @@ export async function generateTypesetImages({
 
   const masterRect = masterBox.getBoundingClientRect();
 
-  // 获取所有可能干扰切割的图片和大型公式的位置
+  // 获取所有可能干扰切割的图片和大型公式的位置（递归测算子元素几何投影）
   const imagesPos = [];
   masterBox.querySelectorAll('img, .katex-display').forEach(el => {
     const rect = el.getBoundingClientRect();
-    const computed = window.getComputedStyle(el);
-    const top = rect.top - masterRect.top - (parseFloat(computed.marginTop) || 0);
-    const bottom = rect.top - masterRect.top + rect.height + (parseFloat(computed.marginBottom) || 0);
-    imagesPos.push({ top, bottom });
+    let top = rect.top - masterRect.top;
+    let bottom = rect.bottom - masterRect.top;
+    el.querySelectorAll('*').forEach(child => {
+      const cr = child.getBoundingClientRect();
+      if (cr.height > 0) {
+        const cTop = cr.top - masterRect.top;
+        const cBottom = cr.bottom - masterRect.top;
+        if (cTop < top) top = cTop;
+        if (cBottom > bottom) bottom = cBottom;
+      }
+    });
+    imagesPos.push({ top, bottom, el });
   });
 
   // 严密测算真实内容高度，包含所有子元素底部位置
@@ -1012,7 +1022,9 @@ export async function generateTypesetImages({
 
     let minCrossTop = theoreticalEnd;
     for (let img of imagesPos) {
-      if (img.top < theoreticalEnd - 15 && img.bottom > theoreticalEnd + 15) {
+      // 核心防截断与防残留：只要公式或图片延伸进底部警戒区（离理论底边不到 30px）或跨越理论底边，
+      // 说明若在此切割会导致公式被腰斩截断或在下一页顶部产生公式残余，必须整块顺延至下一页！
+      if (img.top < theoreticalEnd && img.bottom > theoreticalEnd - 30) {
         if (img.top < minCrossTop) minCrossTop = img.top;
       }
     }
@@ -1047,6 +1059,11 @@ export async function generateTypesetImages({
     pageDiv.className = 'page-container';
 
     let contentWrapper = document.createElement('div');
+    contentWrapper.className = 'content-wrapper';
+    contentWrapper.style.width = '678px';
+    contentWrapper.style.minWidth = '678px';
+    contentWrapper.style.maxWidth = '678px';
+    contentWrapper.style.boxSizing = 'border-box';
     if (isLastPage) {
       const maxPageH = pageHeights[i] || 1020;
       contentWrapper.style.height = maxPageH + 'px';
@@ -1057,6 +1074,10 @@ export async function generateTypesetImages({
 
     let contentClone = document.createElement('div');
     contentClone.className = 'sliced-content';
+    contentClone.style.width = '678px';
+    contentClone.style.minWidth = '678px';
+    contentClone.style.maxWidth = '678px';
+    contentClone.style.boxSizing = 'border-box';
     contentClone.style.marginTop = `-${start}px`;
     contentClone.innerHTML = masterBox.innerHTML;
 

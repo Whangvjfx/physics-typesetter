@@ -1234,11 +1234,14 @@ span.f1.math-sym {
 }
 
 .page-container {
-  width: 800px;
+  width: 800px !important;
+  min-width: 800px !important;
+  max-width: 800px !important;
   height: 1131px;
   background-color: #fdfdfe !important;
   color: #111111 !important;
-  padding: 40px;
+  padding: 40px !important;
+  box-sizing: border-box !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   margin-bottom: 20px;
 }
@@ -1249,7 +1252,10 @@ span.f1.math-sym {
   border-radius: 12px;
   margin-top: 15px;
   margin-bottom: 20px;
-  width: 100%;
+  width: 720px !important;
+  min-width: 720px !important;
+  max-width: 720px !important;
+  box-sizing: border-box !important;
 }
 
 .custom-legend,
@@ -1289,12 +1295,20 @@ span.f1.math-sym {
   border-bottom: none;
 }
 
+.ans-box,
 .exp-box {
-  padding: 0 20px;
+  width: 720px !important;
+  min-width: 720px !important;
+  max-width: 720px !important;
+  padding: 0 20px !important;
+  box-sizing: border-box !important;
 }
 
 .ruled-content {
-  width: 100%;
+  width: 678px !important;
+  min-width: 678px !important;
+  max-width: 678px !important;
+  box-sizing: border-box !important;
   background-image: linear-gradient(to bottom, transparent 59px, #a8b4be 59px, #a8b4be 60px);
   background-size: 100% 60px;
   background-repeat: repeat-y;
@@ -1318,9 +1332,19 @@ span.f1.math-sym {
   height: 1020px;
 }
 
-/* 确保切割层级没有任何自带的 margin / padding 干扰 60px 网格 */
+/* 确保切割容器与主排版盒拥有严格相同的 678px 像素物理宽度，杜绝任何分词回流差异 */
+.content-wrapper {
+  width: 678px !important;
+  min-width: 678px !important;
+  max-width: 678px !important;
+  box-sizing: border-box !important;
+}
+
 .sliced-content {
-  width: 100%;
+  width: 678px !important;
+  min-width: 678px !important;
+  max-width: 678px !important;
+  box-sizing: border-box !important;
   font-size: 21px;
   line-height: 60px !important;
   text-align: left;

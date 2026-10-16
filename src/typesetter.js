@@ -881,8 +881,8 @@ export async function generateTypesetImages({
           // 【核心】：仅汉字应用拟真手写扰动（基线浮动、倾斜、大小微差、字距松紧、同字异构、微洇）
           randomizedText += organicEngine.formatChar(char, isHighlight);
         } else if (/[≠≤≥≈±×÷∝∞°′″∠△⊥∈∑∫√~]/.test(char)) {
-          // 【核心】：物理数学运算符与特殊符号，保留原生符号字体渲染
-          randomizedText += `<span class="f1 math-sym" style="font-family:'KaTeX_Main', 'Caveat', 'HandwritingGreek', 'MyHandwriting', sans-serif; font-size:1.35em; line-height:21px !important; vertical-align:baseline; color:inherit;">${char}</span>`;
+          // 【核心】：物理数学运算符与特殊符号，优先调用手写希腊体与手写符号
+          randomizedText += `<span class="f1 math-sym" style="font-family:'HandwritingGreek', 'Caveat', 'KaTeX_Main', 'MyHandwriting', sans-serif; font-size:1.35em; line-height:21px !important; vertical-align:baseline; color:inherit;">${char}</span>`;
         } else {
           // 【核心】：非汉字（希腊字母、英文字母、数字、西文标点）无缝调用 Caveat + HandwritingGreek 手写体
           randomizedText += `<span class="f1" style="font-family:'Caveat', 'HandwritingGreek', 'MyHandwriting', sans-serif; font-size:1.35em; line-height:21px !important; color:inherit;">${char}</span>`;

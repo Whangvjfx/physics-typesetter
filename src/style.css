@@ -35,7 +35,7 @@
   font-weight: 400;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F;
+  unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F, U+2211, U+2200-22FF;
 }
 
 @font-face {
@@ -45,10 +45,10 @@
   font-weight: 700;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F;
+  unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F, U+2211, U+2200-22FF;
 }
 
-/* 将希腊手写字符集无缝补充进 Caveat 字体族，确保任何声明 Caveat 的地方都能优雅渲染希腊字母 */
+/* 将希腊手写字符集无缝补充进 Caveat 字体族，确保任何声明 Caveat 的地方都能优雅渲染希腊字母与求和符号 */
 @font-face {
   font-family: 'Caveat';
   src: url('/fonts/Handwriting-Greek.woff2') format('woff2'),
@@ -56,7 +56,7 @@
   font-weight: 400;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F;
+  unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F, U+2211, U+2200-22FF;
 }
 
 @font-face {
@@ -66,7 +66,7 @@
   font-weight: 700;
   font-style: normal;
   font-display: swap;
-  unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F;
+  unicode-range: U+0370-03FF, U+1F00-1FFF, U+2100-214F, U+2211, U+2200-22FF;
 }
 
 @font-face {
@@ -1125,6 +1125,17 @@ span.f1.math-sym {
 .katex .mop:not(.op-symbol) {
   font-family: 'Caveat', 'HandwritingGreek', cursive !important;
   font-style: normal !important;
+}
+
+/* 2.1 【求和符号 \sum 与大算子手写化】：将 \sum 等大算子全面接入 HandwritingGreek 手写体，告别生硬机械衬线 */
+.katex .op-symbol {
+  font-family: 'HandwritingGreek', 'Caveat', 'MyHandwriting', cursive !important;
+}
+.katex .op-symbol.small-op {
+  font-family: 'HandwritingGreek', 'Caveat', 'MyHandwriting', cursive !important;
+}
+.katex .op-symbol.large-op {
+  font-family: 'HandwritingGreek', 'Caveat', 'MyHandwriting', cursive !important;
 }
 
 /* 3. 【核心修复】所有上下标与根指数（包括幂次 ^2, 下标 _B, _C, _N, _G, _E, _m, 中文下标 _合, 根号指数 \sqrt[3]{} 等）全量手写化 */

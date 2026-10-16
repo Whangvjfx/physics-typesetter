@@ -889,6 +889,15 @@ export async function generateTypesetImages({
     throwOnError: false
   });
 
+  // ========== 【公式层级自适应】：简单公式/单一物理符号饱满化，复杂公式严格保真 ==========
+  masterBox.querySelectorAll('.katex').forEach(k => {
+    if (k.querySelector('.mfrac, .sqrt, .mtable, .op-symbol.large-op')) {
+      k.classList.add('katex-complex');
+    } else {
+      k.classList.add('katex-simple');
+    }
+  });
+
   // ========== 美化根号为自然手写笔画 ==========
   beautifyRadicals(masterBox);
 

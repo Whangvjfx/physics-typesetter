@@ -219,6 +219,33 @@ span.f1.math-sym {
   color: inherit !important;
 }
 
+/* 简单公式与单一物理量（如 v1, v共, v 等）手写字号饱满化，与汉字视觉平衡 */
+.katex.katex-simple,
+.katex:not(:has(.mfrac)):not(:has(.sqrt)):not(:has(.mtable)):not(:has(.large-op)) {
+  font-size: 1.50em !important;
+}
+.katex.katex-simple .msupsub .sizing,
+.katex:not(:has(.mfrac)):not(:has(.sqrt)):not(:has(.mtable)) .msupsub .sizing {
+  font-size: 0.85em !important;
+}
+.katex.katex-simple .msupsub .mtight,
+.katex:not(:has(.mfrac)):not(:has(.sqrt)):not(:has(.mtable)) .msupsub .mtight {
+  font-size: 0.85em !important;
+}
+.katex.katex-simple .msupsub .cjk_fallback,
+.katex:not(:has(.mfrac)):not(:has(.sqrt)):not(:has(.mtable)) .msupsub .cjk_fallback {
+  font-size: 1em !important;
+}
+
+/* 复杂公式保持原有严谨比例与紧凑高度，杜绝触碰横线 */
+.katex.katex-complex,
+.katex:has(.mfrac),
+.katex:has(.sqrt),
+.katex:has(.mtable),
+.katex:has(.large-op) {
+  font-size: 1.25em !important;
+}
+
 /* 解除公式内部的 60px 限制，防止上下标被拉扯破碎 */
 .katex * {
   line-height: normal !important;

@@ -948,18 +948,34 @@ export async function generateTypesetImages({
   // ========== 【跨平台行高锁定核心】：行内公式零高度化，杜绝行框被撑高 ==========
   neutralizeInlineMath(masterBox);
 
-  // ========== 【完美对齐核心】：公式高度强制锁定为 60 的倍数 ==========
+  // ========== 【完美对齐与防截断核心】：公式高度智能自适应与单行安全适配 ==========
   masterBox.querySelectorAll('.katex-display').forEach(el => {
-    const h = el.offsetHeight;
-    const targetH = Math.ceil(h / 60) * 60;
+    // 测算公式实际内容的真实几何高度
+    const kHtml = el.querySelector('.katex-html') || el;
+    const rawH = kHtml.getBoundingClientRect().height || el.offsetHeight;
 
-    if (targetH > 0) {
-      el.style.height = targetH + 'px';
-      el.style.display = 'flex';
-      el.style.alignItems = 'center';
-      el.style.margin = '0px !important';
-      el.style.padding = '0px !important';
+    // 单行公式阈值：凡是在 78px 以内的公式（如含根号分数的复杂单行物理公式），
+    // 均自适应锁定为单行 60px 高度，绝不无故撑大为 120px 造成空行与跨页截断！
+    let targetH;
+    if (rawH <= 78) {
+      targetH = 60;
+      // 若稍微超出 52px 安全视觉区，等比例微调缩放至 52px 内，确保上下均有至少 4px 安全边距，绝不触碰或溢出 60px 行框
+      if (rawH > 52) {
+        const s = (52 / rawH).toFixed(3);
+        kHtml.style.transform = `scale(${s})`;
+        kHtml.style.transformOrigin = 'center center';
+      }
+    } else {
+      // 真正的大型多行公式（方程组、矩阵等）才分配多行高度
+      targetH = Math.ceil(rawH / 60) * 60;
     }
+
+    el.style.height = targetH + 'px';
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'flex-start';
+    el.style.margin = '0px !important';
+    el.style.padding = '0px !important';
   });
 
   // ========== 【V4 行级宏观书写流与行尾挤压】：低频基线波与边界心理紧缩 ==========
@@ -1020,26 +1036,18 @@ export async function generateTypesetImages({
     const usableHeight = boxHeight;
     const theoreticalEnd = start + usableHeight;
 
-    let minCrossTop = theoreticalEnd;
+    // 【放宽限制·杜绝截断与空行核心算法】：
+    // 用户明确要求：若最后一行出现公式，绝不提前换页留空行（学生极其反感空行凑页数），
+    // 而是放宽本页限制，让公式完整在本页显示，下页从公式之后完整开启，零残余！
+    let actualEnd = theoreticalEnd;
     for (let img of imagesPos) {
-      // 核心防截断与防残留：只要公式或图片延伸进底部警戒区（离理论底边不到 30px）或跨越理论底边，
-      // 说明若在此切割会导致公式被腰斩截断或在下一页顶部产生公式残余，必须整块顺延至下一页！
-      if (img.top < theoreticalEnd && img.bottom > theoreticalEnd - 30) {
-        if (img.top < minCrossTop) minCrossTop = img.top;
+      if (img.top < theoreticalEnd && img.bottom > theoreticalEnd) {
+        const expandedEnd = Math.ceil(img.bottom / 60) * 60;
+        if (expandedEnd > actualEnd) {
+          actualEnd = expandedEnd;
+        }
       }
     }
-
-    let actualEnd;
-    if (minCrossTop < theoreticalEnd) {
-      actualEnd = Math.floor(minCrossTop / 60) * 60;
-      if (actualEnd <= start) {
-        actualEnd = start + 60;
-      }
-    } else {
-      actualEnd = theoreticalEnd;
-    }
-
-    actualEnd = Math.floor(actualEnd / 60) * 60;
 
     if (actualEnd > totalHeight) actualEnd = totalHeight;
 
@@ -1054,9 +1062,16 @@ export async function generateTypesetImages({
     const end = pageStarts[i + 1];
     const contentDisplayHeight = end - start;
     const isLastPage = (i === pageStarts.length - 2);
+    const boxHeight = pageHeights[i] || 1020;
+    const targetRuledHeight = Math.max(boxHeight, contentDisplayHeight);
 
     let pageDiv = document.createElement('div');
     pageDiv.className = 'page-container';
+    // 放宽限制：允许页面自适应高度完整包裹放宽的公式，基准 minHeight 1131px (A4)
+    pageDiv.style.minHeight = '1131px';
+    pageDiv.style.height = 'auto';
+    pageDiv.style.boxSizing = 'border-box';
+    pageDiv.style.padding = '40px';
 
     let contentWrapper = document.createElement('div');
     contentWrapper.className = 'content-wrapper';
@@ -1065,8 +1080,7 @@ export async function generateTypesetImages({
     contentWrapper.style.maxWidth = '678px';
     contentWrapper.style.boxSizing = 'border-box';
     if (isLastPage) {
-      const maxPageH = pageHeights[i] || 1020;
-      contentWrapper.style.height = maxPageH + 'px';
+      contentWrapper.style.height = targetRuledHeight + 'px';
     } else {
       contentWrapper.style.height = contentDisplayHeight + 'px';
       contentWrapper.style.overflow = 'hidden';
@@ -1096,7 +1110,10 @@ export async function generateTypesetImages({
             <div class="ruled-content p1"></div>
         </div>
       `;
-      pageDiv.querySelector('.p1').appendChild(contentWrapper);
+      const ruled = pageDiv.querySelector('.p1');
+      ruled.style.height = targetRuledHeight + 'px';
+      ruled.style.minHeight = targetRuledHeight + 'px';
+      ruled.appendChild(contentWrapper);
     } else {
       pageDiv.innerHTML = `
         <div class="custom-box exp-box" style="margin-bottom: 0;">
@@ -1104,7 +1121,10 @@ export async function generateTypesetImages({
             <div class="ruled-content p2"></div>
         </div>
       `;
-      pageDiv.querySelector('.p2').appendChild(contentWrapper);
+      const ruled = pageDiv.querySelector('.p2');
+      ruled.style.height = targetRuledHeight + 'px';
+      ruled.style.minHeight = targetRuledHeight + 'px';
+      ruled.appendChild(contentWrapper);
     }
 
     captureZone.appendChild(pageDiv);

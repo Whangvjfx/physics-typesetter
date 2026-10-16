@@ -662,8 +662,18 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
         transform = `transform: translateY(${deltaY}px) rotate(${finalRotZ}deg) scale(${finalScaleX}, ${finalScaleY}) skewX(${finalSkewX}deg);`;
       }
 
+      const fontFamilies = [
+        "'Caveat', 'HandwritingGreek', 'MyHandwriting', 'KaiTi', '楷体', serif",
+        "'Caveat', 'HandwritingGreek', 'MyHandwriting-Var1', 'MyHandwriting', 'KaiTi', '楷体', serif",
+        "'Caveat', 'HandwritingGreek', 'MyHandwriting-Var2', 'MyHandwriting', 'KaiTi', '楷体', serif",
+        "'Caveat', 'HandwritingGreek', 'MyHandwriting-Var3', 'MyHandwriting', 'KaiTi', '楷体', serif",
+        "'Caveat', 'HandwritingGreek', 'MyHandwriting-Var4', 'MyHandwriting', 'KaiTi', '楷体', serif",
+        "'Caveat', 'HandwritingGreek', 'MyHandwriting-Var5', 'MyHandwriting', 'KaiTi', '楷体', serif"
+      ];
+      const fontCSS = `font-family: ${fontFamilies[variantIndex] || fontFamilies[0]} !important;`;
+
       const glyphClass = `glyph-v${variantIndex}`;
-      return `<span class="f1 organic-char ${glyphClass}" style="display:inline-block; vertical-align:baseline; font-size:1.5em; line-height:21px !important; margin-right:${marginR}px; margin-left:${marginL}px; opacity:${opacity}; ${colorCSS} ${strokeCSS} ${shadowCSS} ${originCSS} ${transform}">${char}</span>`;
+      return `<span class="f1 organic-char ${glyphClass}" style="display:inline-block; vertical-align:baseline; font-size:1.5em; line-height:21px !important; margin-right:${marginR}px; margin-left:${marginL}px; opacity:${opacity}; ${fontCSS} ${colorCSS} ${strokeCSS} ${shadowCSS} ${originCSS} ${transform}">${char}</span>`;
     }
   };
 }

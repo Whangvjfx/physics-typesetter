@@ -472,6 +472,12 @@ presetBtns.forEach(btn => {
     # 10. 页面启动时自动预加载字体
     content = content.replace("loadDraft();", "loadDraft();\npreloadHandwritingFonts();")
 
+    # 11. 彻底清除原版遗留的 .page-container * 通配符强制重置规则，恢复每个字的独立变体字形
+    content = content.replace(
+        ".page-container, .page-container *,\n#master-box, #master-box *,\n#capture-zone, #capture-zone *,\n.sliced-content, .sliced-content *",
+        ".page-container,\n#master-box,\n#capture-zone,\n.sliced-content"
+    )
+
     dest_dirs = [
         r"C:\Users\wb686\Desktop\物理排版-非线性体验.html",
         r"C:\Users\wb686\Desktop\非线性\物理排版-非线性体验.html",

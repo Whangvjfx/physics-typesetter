@@ -626,21 +626,39 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
       const velInkFactor = (1.0 - strokeVel * 0.04 * K);
       const opacity = Math.min(1.0, Math.max(0.88, (0.86 + state.pressure * 0.14) * velInkFactor)).toFixed(2);
 
+      // ========== 【字重粗细全局动态均衡系统 (Weight Normalization Engine)】 ==========
+      // 针对 6 套少女手写体原生粗细差异进行精准补强与软化，使整篇笔记呈现“同一支0.5mm中性笔”书写的均匀质感
+      const variantStrokeMap = [0.30, 0.0, 0.22, 0.0, 0.0, 0.10];
+      const variantOpacityMap = [1.0, 0.84, 0.98, 0.85, 0.90, 0.95];
+      
+      const vStroke = variantStrokeMap[variantIndex] !== undefined ? variantStrokeMap[variantIndex] : 0.0;
+      const vOpacity = variantOpacityMap[variantIndex] !== undefined ? variantOpacityMap[variantIndex] : 1.0;
+
+      const dynamicPressureStroke = (state.pressure - 0.90) * 0.08 * K;
+      const finalStrokeVal = Math.max(0, vStroke + dynamicPressureStroke);
+      
       let strokeCSS = '';
-      const currentStroke = (0.04 + (state.pressure - 0.90) * 0.15) * (0.5 + 0.5 * K);
-      if (currentStroke > 0.02) {
-        strokeCSS = `-webkit-text-stroke: ${currentStroke.toFixed(2)}px currentColor;`;
+      if (finalStrokeVal > 0.02) {
+        strokeCSS = `-webkit-text-stroke: ${finalStrokeVal.toFixed(2)}px currentColor;`;
       }
 
-      const shadowDx = (Math.sin(seq * 0.3) * 0.22 * K).toFixed(2);
-      const shadowDy = (Math.cos(seq * 0.3) * 0.22 * K).toFixed(2);
-      const shadowBlur1 = (0.38 + (1.05 - state.pressure) * 0.12).toFixed(2);
-      const shadowBlur2 = (0.85 + (state.pressure - 0.90) * 0.25).toFixed(2);
+      const effectiveOpacity = Math.max(0.78, Math.min(1.0, opacity * vOpacity)).toFixed(2);
+
       let shadowCSS = '';
-      if (isHighlight) {
-        shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px ${shadowBlur1}px rgba(211, 47, 47, 0.52), 0 0 ${shadowBlur2}px rgba(211, 47, 47, 0.16);`;
+      // 粗体字库 (Var 1, Var 3, Var 4) 免除重度阴影，避免墨晕堆积发胀；细体字库保留微洇墨感
+      if (variantIndex === 1 || variantIndex === 3) {
+        shadowCSS = 'text-shadow: none;';
+      } else if (variantIndex === 4) {
+        shadowCSS = isHighlight ? 'text-shadow: 0 0 0.5px rgba(211, 47, 47, 0.25);' : 'text-shadow: 0 0 0.5px rgba(18, 20, 24, 0.20);';
       } else {
-        shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px ${shadowBlur1}px rgba(18, 20, 24, 0.46), 0 0 ${shadowBlur2}px rgba(18, 20, 24, 0.15);`;
+        const shadowDx = (Math.sin(seq * 0.3) * 0.18 * K).toFixed(2);
+        const shadowDy = (Math.cos(seq * 0.3) * 0.18 * K).toFixed(2);
+        const shadowBlur1 = (0.35 + (1.05 - state.pressure) * 0.10).toFixed(2);
+        if (isHighlight) {
+          shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px ${shadowBlur1}px rgba(211, 47, 47, 0.42);`;
+        } else {
+          shadowCSS = `text-shadow: ${shadowDx}px ${shadowDy}px ${shadowBlur1}px rgba(18, 20, 24, 0.35);`;
+        }
       }
 
       let colorCSS = '';
@@ -650,7 +668,13 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
         const redB = Math.round(35 + (1.05 - state.pressure) * 22);
         colorCSS = `color: rgb(${redR}, ${redG}, ${redB}) !important;`;
       } else {
-        const gray = Math.round(14 + (1.05 - state.pressure) * 26);
+        let baseGray = 14;
+        // 对原生偏粗的变体 1 与变体 3，墨色略调柔和，避免浓墨重块
+        if (variantIndex === 1) baseGray = 36;
+        else if (variantIndex === 3) baseGray = 32;
+        else if (variantIndex === 4) baseGray = 24;
+
+        const gray = Math.round(baseGray + (1.05 - state.pressure) * 22);
         colorCSS = `color: rgb(${gray}, ${gray + 2}, ${gray + 5}) !important;`;
       }
 
@@ -673,7 +697,7 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
       const fontCSS = `font-family: ${fontFamilies[variantIndex] || fontFamilies[0]} !important;`;
 
       const glyphClass = `glyph-v${variantIndex}`;
-      return `<span class="f1 organic-char ${glyphClass}" style="display:inline-block; vertical-align:baseline; font-size:1.5em; line-height:21px !important; margin-right:${marginR}px; margin-left:${marginL}px; opacity:${opacity}; ${fontCSS} ${colorCSS} ${strokeCSS} ${shadowCSS} ${originCSS} ${transform}">${char}</span>`;
+      return `<span class="f1 organic-char ${glyphClass}" style="display:inline-block; vertical-align:baseline; font-size:1.5em; line-height:21px !important; margin-right:${marginR}px; margin-left:${marginL}px; opacity:${effectiveOpacity}; ${fontCSS} ${colorCSS} ${strokeCSS} ${shadowCSS} ${originCSS} ${transform}">${char}</span>`;
     }
   };
 }

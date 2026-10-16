@@ -3,6 +3,28 @@ import katex from 'katex';
 import renderMathInElement from 'katex/contrib/auto-render';
 
 /**
+ * 显式预加载并解码所有变体手写字体与依赖字体，确保离线环境和 html2canvas 绝对使用真实手写字形
+ */
+export async function preloadHandwritingFonts() {
+  const requiredFonts = [
+    '21px MyHandwriting',
+    '21px MyHandwriting-Var1',
+    '21px MyHandwriting-Var2',
+    '21px MyHandwriting-Var3',
+    '21px MyHandwriting-Var4',
+    '21px MyHandwriting-Var5',
+    '21px Caveat',
+    '21px HandwritingGreek'
+  ];
+  try {
+    await Promise.all(requiredFonts.map(f => document.fonts.load(f)));
+  } catch (err) {
+    console.warn('Font preload warning:', err);
+  }
+  await document.fonts.ready;
+}
+
+/**
  * 计算 KaTeX 公式真实的可视包围盒（所有 .base 片段的并集）
  */
 function mathBox(el) {
@@ -863,28 +885,40 @@ export async function generateTypesetImages({
   // ========== 【避头尾法则 / 标点防孤行】确保标点符号与前字绑定，绝不出现行首孤点 ==========
   const punctRegex = /^[，。、；：？！,.;:?!’”'”）》〉】〕｝]$/;
   const spans = Array.from(masterBox.querySelectorAll('span.f1'));
-  for (let i = 1; i < spans.length; i++) {
-    const text = spans[i].textContent.trim();
+  for (let i = 0; i < spans.length; i++) {
+    const el = spans[i];
+    const text = el.textContent.trim();
     if (punctRegex.test(text)) {
-      const prev = spans[i - 1];
-      if (prev.parentElement && !prev.parentElement.classList.contains('kinsoku-wrap')) {
-        const wrapper = document.createElement('span');
-        wrapper.className = 'kinsoku-wrap';
-        wrapper.style.cssText = 'white-space: nowrap !important; display: inline !important;';
-        prev.parentNode.insertBefore(wrapper, prev);
-        wrapper.appendChild(prev);
-        wrapper.appendChild(spans[i]);
+      // 1. 若该标点符号已经被包裹在 nowrap 容器中（例如已与公式在预处理阶段绑定），严禁跨节点挪动位置！
+      if (el.closest('.kinsoku-wrap') || el.closest('[style*="nowrap"]')) {
+        continue;
       }
+      // 2. 获取其在真实 DOM 树中的紧邻前驱兄弟节点（杜绝跨公式跨节点错误错位）
+      let prev = el.previousSibling;
+      while (prev && prev.nodeType === Node.TEXT_NODE && prev.textContent.trim() === '') {
+        prev = prev.previousSibling;
+      }
+      if (!prev) continue;
+      // 避免重复包裹或与换行符错误包裹
+      if (prev.nodeType === Node.ELEMENT_NODE && (prev.classList.contains('kinsoku-wrap') || prev.tagName === 'BR')) {
+        continue;
+      }
+      const wrapper = document.createElement('span');
+      wrapper.className = 'kinsoku-wrap';
+      wrapper.style.cssText = 'white-space: nowrap !important; display: inline !important;';
+      prev.parentNode.insertBefore(wrapper, prev);
+      wrapper.appendChild(prev);
+      wrapper.appendChild(el);
     }
   }
 
   // ========== 【V4 纸张纤维微洇】：注入微观纸张物理质感 SVG 滤镜 ==========
   ensureInkBleedFilter(captureZone, nonlinearIntensity);
 
-  // 强制等待网络与本地字体加载完毕并留出绘制时间
-  await document.fonts.ready;
+  // 强制显式预加载与解码全部 6 套变体中文字体族、西文手写体与希腊体，杜绝 html2canvas 异步绘制时字形回退降级为同一基准字体
+  await preloadHandwritingFonts();
   let fontWaitCount = 0;
-  while (!document.fonts.check('21px MyHandwriting') && fontWaitCount < 10) {
+  while ((!document.fonts.check('21px MyHandwriting-Var1') || !document.fonts.check('21px MyHandwriting-Var2')) && fontWaitCount < 20) {
     await new Promise(r => setTimeout(r, 100));
     fontWaitCount++;
   }

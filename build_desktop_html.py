@@ -382,11 +382,11 @@ span.f1.math-sym {
     with open(r"C:\Users\wb686\.gemini\antigravity\scratch\physics-typesetter-nonlinear\src\typesetter.js", 'r', encoding='utf-8') as f:
         ts_code = f.read()
 
-    b_start = ts_code.find("function beautifyRadicals")
+    b_start = ts_code.find("async function preloadHandwritingFonts")
     ts_end = ts_code.rfind('}') + 1
-    ts_full_block = ts_code[b_start:ts_end].replace("export async function generateTypesetImages", "async function generateTypesetImages")
+    ts_full_block = ts_code[b_start:ts_end].replace("export async function", "async function")
 
-    old_block_start = content.find("function hash32")
+    old_block_start = content.find("function mathBox")
     old_block_end = content.find("// ==========================================================================\n// 主逻辑")
     content = content[:old_block_start] + ts_full_block + "\n\n" + content[old_block_end:]
 
@@ -469,6 +469,9 @@ presetBtns.forEach(btn => {
     # 9. 纸张底色全面白皙化 (由偏黄 #fbf9f4 升级为纯白答题纸质感 #fdfdfe)
     content = content.replace("#fbf9f4", "#fdfdfe")
 
+    # 10. 页面启动时自动预加载字体
+    content = content.replace("loadDraft();", "loadDraft();\npreloadHandwritingFonts();")
+
     dest_dirs = [
         r"C:\Users\wb686\Desktop\物理排版-非线性体验.html",
         r"C:\Users\wb686\Desktop\非线性\物理排版-非线性体验.html",
@@ -479,6 +482,23 @@ presetBtns.forEach(btn => {
         with open(d_path, 'w', encoding='utf-8') as f:
             f.write(content)
         print(f"Generated {d_path} ({os.path.getsize(d_path)} bytes)")
+
+    # 11. 同步全量字体文件至各桌面目录
+    import shutil
+    public_fonts_dir = r"C:\Users\wb686\.gemini\antigravity\scratch\physics-typesetter-nonlinear\public\fonts"
+    target_font_dirs = [
+        r"C:\Users\wb686\Desktop\fonts",
+        r"C:\Users\wb686\Desktop\非线性\fonts",
+        r"C:\Users\wb686\Desktop\非线性_V4_Pro\fonts"
+    ]
+    for tf_dir in target_font_dirs:
+        os.makedirs(tf_dir, exist_ok=True)
+        for font_file in os.listdir(public_fonts_dir):
+            src_f = os.path.join(public_fonts_dir, font_file)
+            dst_f = os.path.join(tf_dir, font_file)
+            if os.path.isfile(src_f):
+                shutil.copy2(src_f, dst_f)
+        print(f"Synced fonts to {tf_dir}")
 
 if __name__ == '__main__':
     generate()

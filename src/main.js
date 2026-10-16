@@ -1,9 +1,12 @@
-import { generateTypesetImages } from './typesetter.js';
+import { generateTypesetImages, preloadHandwritingFonts } from './typesetter.js';
 import {
   triggerHaptic,
   showToast,
   readClipboardText
 } from './native.js';
+
+// 应用启动时立即在后台预加载与解码手写字体
+preloadHandwritingFonts();
 
 // 状态管理
 let pastedImageSrc = null;

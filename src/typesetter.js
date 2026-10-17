@@ -98,7 +98,7 @@ function neutralizeInlineMath(root) {
 }
 
 /**
- * 【手写根号 5 套变体美化核心】复刻用户 iPad 亲笔手写的 5 种根号钩弧形态，按禁忌序列轮换
+ * 【手写根号 5 套变体美化核心】复刻用户 iPad 亲笔手写的 5 种根号钩弧与横梁微弧形态，按禁忌序列轮换
  */
 function beautifyRadicals(root) {
   const sqrtSvgs = root.querySelectorAll('.katex .sqrt .hide-tail svg');
@@ -116,62 +116,206 @@ function beautifyRadicals(root) {
     const v = idx % 5;
     const r1 = (Math.sin(idx * 1.9 + 0.5)) * 4;
     const r2 = (Math.cos(idx * 2.3 + 1.1)) * 3;
-    const topY = Math.round(90 + r1);
+    const topY = Math.round(95 + r1);
     const bottomY = Math.round(H - 38 + r2);
+    const wA = Math.max(46, Math.round(H * 0.038));
+    const isRed = Boolean(svg.closest('.highlight'));
+    const inkColor = isRed ? '#d32f2f' : '#14161a';
 
-    // 5 套源自用户 iPad 手写采样表 (Page 13 Row 7) 的差异化根号运笔骨架
+    // 5 套源自用户 iPad 手写采样表 (Page 13 Row 7 & Page 11 Row 2) 的差异化根号钩弧 + 自然手写顶横梁波动
     let d;
     if (v === 0) {
       const sY = Math.round(H * 0.58);
-      d = `M 255,${sY} Q 320,${Math.round(H * 0.74)} 425,${bottomY} Q 455,${bottomY} 525,${Math.round(H * 0.72)} T 925,${topY} Q 980,${topY - 4} 1060,${topY} L 400000,${topY}`;
+      d = `M 235,${sY} Q 315,${Math.round(H * 0.74)} 425,${bottomY} Q 455,${bottomY} 535,${Math.round(H * 0.72)} T 940,${topY + Math.round(wA * 0.35)} Q 2200,${topY - wA} 4200,${topY - Math.round(wA * 0.65)} T 8500,${topY + Math.round(wA * 0.3)} L 400000,${topY}`;
     } else if (v === 1) {
       const sY = Math.round(H * 0.54);
-      d = `M 205,${sY + 18} Q 255,${sY - 12} 295,${sY + 10} Q 360,${Math.round(H * 0.78)} 435,${bottomY + 4} Q 465,${bottomY + 4} 540,${Math.round(H * 0.75)} T 965,${topY + 2} L 400000,${topY}`;
+      d = `M 195,${sY + 18} Q 250,${sY - 12} 295,${sY + 10} Q 360,${Math.round(H * 0.78)} 435,${bottomY + 4} Q 465,${bottomY + 4} 545,${Math.round(H * 0.75)} T 975,${topY + Math.round(wA * 0.25)} Q 2100,${topY - Math.round(wA * 0.9)} 3900,${topY - Math.round(wA * 0.4)} T 8200,${topY + Math.round(wA * 0.45)} L 400000,${topY}`;
     } else if (v === 2) {
       const sY = Math.round(H * 0.63);
-      d = `M 280,${sY} L 440,${bottomY - 4} Q 465,${bottomY - 4} 520,${Math.round(H * 0.74)} L 910,${topY - 3} Q 960,${topY - 5} 1040,${topY} L 400000,${topY}`;
+      d = `M 265,${sY} L 440,${bottomY - 4} Q 465,${bottomY - 4} 525,${Math.round(H * 0.74)} L 925,${topY - 4} Q 1950,${topY + Math.round(wA * 0.85)} 3700,${topY + Math.round(wA * 0.2)} T 7800,${topY - Math.round(wA * 0.8)} L 400000,${topY}`;
     } else if (v === 3) {
       const sY = Math.round(H * 0.56);
-      d = `M 235,${sY} Q 315,${Math.round(H * 0.76)} 455,${bottomY + 2} Q 485,${bottomY + 2} 555,${Math.round(H * 0.76)} T 990,${topY + 3} L 400000,${topY}`;
+      d = `M 225,${sY} Q 315,${Math.round(H * 0.76)} 455,${bottomY + 2} Q 485,${bottomY + 2} 560,${Math.round(H * 0.76)} T 995,${topY + 8} Q 2300,${topY + Math.round(wA * 0.75)} 4300,${topY - Math.round(wA * 0.75)} T 8800,${topY - Math.round(wA * 0.3)} L 400000,${topY}`;
     } else {
       const sY = Math.round(H * 0.60);
-      d = `M 265,${sY} Q 330,${Math.round(H * 0.77)} 410,${bottomY - 2} Q 440,${bottomY - 2} 505,${Math.round(H * 0.71)} T 895,${topY - 2} Q 950,${topY - 4} 1035,${topY} L 400000,${topY}`;
+      d = `M 250,${sY} Q 330,${Math.round(H * 0.77)} 410,${bottomY - 2} Q 440,${bottomY - 2} 510,${Math.round(H * 0.71)} T 915,${topY + Math.round(wA * 0.4)} Q 2200,${topY - Math.round(wA * 0.95)} 4100,${topY - Math.round(wA * 0.55)} T 8400,${topY + Math.round(wA * 0.4)} L 400000,${topY}`;
     }
 
     path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', inkColor);
+    path.setAttribute('stroke-width', '44');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
     path.style.setProperty('fill', 'none', 'important');
-    path.style.setProperty('stroke', 'currentColor', 'important');
-    path.style.setProperty('stroke-width', '42px', 'important');
+    path.style.setProperty('stroke', inkColor, 'important');
+    path.style.setProperty('stroke-width', '44px', 'important');
     path.style.setProperty('stroke-linecap', 'round', 'important');
     path.style.setProperty('stroke-linejoin', 'round', 'important');
   });
 }
 
 /**
- * 【手写分数线优化】全平台与 html2canvas 绝对可见的真实 CSS 描边与手写微倾
- * 严禁使用动态 SVG 注入（html2canvas 无法稳定光栅化零高度行内 SVG 导致分数线缺失）
- * 严格保持零高度包裹，绝不干扰 60px 行高布局
+ * 【手写分数线 5 套变体引擎】提取自用户 iPad 亲笔手写横画采样 (Page 11 Row 2: 89. − 的 5 套真实运笔轨迹与粗细变化)
+ * 1. 自动微扩紧凑行内分数（如 1/2, x/2）的上下间距，彻底杜绝分子分母压线；
+ * 2. 将手写分数线精确定位在分子底边与分母顶边的几何正中；
+ * 3. 采用显式像素尺寸与闭合变粗细墨迹轮廓 <svg><path fill="..."/></svg>，展现明显的手写拱度、S 波、顿笔与出锋，
+ *    在 iOS WebKit / 浏览器预览与 html2canvas 光栅化中 100% 清晰稳定。
  */
-function beautifyFractionLines(root) {
-  const fracLines = root.querySelectorAll('.katex .frac-line');
+function beautifyFractionLines(root, nonlinearIntensity = 0.60) {
+  const fracLines = root.querySelectorAll('.katex .frac-line, .katex .overline .overline-line, .katex .underline .underline-line');
   if (!fracLines.length) return;
 
-  fracLines.forEach((fl) => {
-    // 彻底清除旧版本遗留的 SVG，防止渲染黑块或空节点
+  const K = Math.max(0.2, Math.min(1.0, Number(nonlinearIntensity) ?? 0.60));
+  const recentVars = [];
+  let rngState = 0x5A3C9E17;
+  const nextRand = () => {
+    rngState ^= rngState << 13;
+    rngState ^= rngState >>> 17;
+    rngState ^= rngState << 5;
+    return (rngState >>> 0) / 4294967296;
+  };
+
+  fracLines.forEach((fl, idx) => {
     const oldSvg = fl.querySelector('svg');
     if (oldSvg) oldSvg.remove();
-    fl.classList.remove('handwritten-frac');
 
-    // 严禁旋转倾斜，严禁 display: block（html2canvas 下 block 会导致分数线严重下坠压迫分母字符）
-    // 保持原生 inline-block，确保分数线水平、平直、清晰可见且绝对不与分母干涉
-    fl.style.setProperty('border-bottom-style', 'solid', 'important');
-    fl.style.setProperty('border-bottom-width', '1.2px', 'important');
-    fl.style.setProperty('border-bottom-color', 'currentColor', 'important');
+    // 清除机械直线 border，保持原生 inline-block 零高度定位
+    fl.classList.add('handwritten-frac');
+    fl.style.setProperty('border', 'none', 'important');
+    fl.style.setProperty('border-bottom', 'none', 'important');
+    fl.style.setProperty('background', 'transparent', 'important');
     fl.style.setProperty('display', 'inline-block', 'important');
-    fl.style.setProperty('opacity', '0.95', 'important');
-    fl.style.removeProperty('border-radius');
-    fl.style.removeProperty('transform');
-    fl.style.removeProperty('transform-origin');
+    fl.style.setProperty('width', '100%', 'important');
+    fl.style.setProperty('height', '0px', 'important');
+    fl.style.setProperty('min-height', '0px', 'important');
+    fl.style.setProperty('position', 'relative', 'important');
+    fl.style.setProperty('overflow', 'visible', 'important');
+    fl.style.setProperty('vertical-align', 'baseline', 'important');
+    fl.style.setProperty('opacity', '0.96', 'important');
+
+    const flRect = fl.getBoundingClientRect();
+    const rawW = flRect.width || fl.offsetWidth || 18;
+    const w = Math.max(16, Math.round(rawW + 3));
+    const svgH = 14;
+    const cy = 7.0;
+    const svgLeft = (rawW - w) * 0.5;
+    // 补偿手写字体 (UserFormula-Var1..5) 在 html2canvas 下的基线落差 (+3.5px)，使分数线严丝合缝处于分子底与分母顶正中央
+    let svgTop = -cy + 3.5;
+
+    // 针对行内紧凑分数 (如 \frac{1}{2}, \frac{x}{2})，通过 KaTeX 原生 .vlist > span 的 top 属性微扩分子分母间距，彻底杜绝压线
+    const isInlineMath = !fl.closest('.katex-display');
+    const vlist = fl.closest('.vlist');
+    if (vlist && fl.classList.contains('frac-line')) {
+      const rows = Array.from(vlist.children).filter(el => el.tagName === 'SPAN' && !el.classList.contains('vlist-s'));
+      if (rows.length >= 3) {
+        const denRow = rows[0];
+        const numRow = rows[rows.length - 1];
+        if (isInlineMath) {
+          if (numRow.style.top && !numRow.dataset.fracAdjusted) {
+            numRow.style.top = `calc(${numRow.style.top} - 3.8px)`;
+            numRow.dataset.fracAdjusted = '1';
+          }
+          if (denRow.style.top && !denRow.dataset.fracAdjusted) {
+            denRow.style.top = `calc(${denRow.style.top} + 2.2px)`;
+            denRow.dataset.fracAdjusted = '1';
+          }
+        } else {
+          if (numRow.style.top && !numRow.dataset.fracAdjusted) {
+            numRow.style.top = `calc(${numRow.style.top} - 1.6px)`;
+            numRow.dataset.fracAdjusted = '1';
+          }
+          if (denRow.style.top && !denRow.dataset.fracAdjusted) {
+            denRow.style.top = `calc(${denRow.style.top} + 1.4px)`;
+            denRow.dataset.fracAdjusted = '1';
+          }
+        }
+      }
+    }
+
+    // 5 套变体禁忌轮换（最近 3 条分数线绝不重复同一套笔迹）
+    const allVars = [0, 1, 2, 3, 4];
+    let cands = allVars.filter(v => !recentVars.includes(v));
+    if (!cands.length) cands = allVars;
+    const v = cands[Math.floor(nextRand() * cands.length)];
+    recentVars.push(v);
+    if (recentVars.length > 3) recentVars.shift();
+
+    const isRed = Boolean(fl.closest('.highlight'));
+    const inkColor = isRed ? '#d32f2f' : '#14161a';
+
+    // 显著的手写拱度 (archA) 与自然腕部倾角 (slantA)，一眼告别印刷体直线，同时严格控制在净空内绝不碰字
+    const archA = Math.min(2.25, Math.max(1.25, 0.88 + w * 0.017)) * (0.75 + 0.25 * K);
+    const slantA = Math.min(2.10, Math.max(1.05, 0.72 + w * 0.015)) * (0.75 + 0.25 * K);
+    const phase = (idx * 1.73 + v * 0.91);
+
+    const N = 20;
+    const upperPts = [];
+    const lowerPts = [];
+    const xStart = -0.4;
+    const xSpan = w + 0.8;
+
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const x = xStart + xSpan * t;
+
+      // 5 套源自用户 iPad 手写采样的明显差异化横画轨迹（含拱背横、仰瓦横、S 波浪横、左顿右挑横、左沉右拱横）
+      let dy = 0;
+      if (v === 0) {
+        // 变体 1：左端落笔微沉下弯，中后段向右上轻快挑出
+        dy = slantA * (0.92 * (1 - t) - 1.02 * t) + archA * 0.85 * Math.sin(Math.PI * Math.pow(t, 0.68));
+      } else if (v === 1) {
+        // 变体 2：典型手写“弓背横”，全段明显向上拱起，右端微顿收笔
+        dy = slantA * (0.78 * (1 - t) - 0.35 * t) - archA * 1.12 * Math.sin(Math.PI * Math.pow(t, 0.92));
+      } else if (v === 2) {
+        // 变体 3：手写“仰瓦横”，起笔微昂后中段自然下凹，尾端向右上扬起出锋
+        dy = slantA * (-0.20 * (1 - t) - 0.96 * t) + archA * 1.08 * Math.sin(Math.PI * Math.pow(t, 0.85));
+      } else if (v === 3) {
+        // 变体 4：手腕连贯 S 型微波横画，左拱右凹再微挑
+        dy = slantA * (0.52 * (1 - t) - 0.62 * t) - archA * 0.95 * Math.sin(2.0 * Math.PI * Math.pow(t, 0.90));
+      } else {
+        // 变体 5：左 1/3 落笔微顿下压，右 2/3 向上舒展拱起后收笔回顿
+        dy = slantA * (0.62 * (1 - t) - 0.52 * t) + archA * 0.92 * Math.sin(1.85 * Math.PI * t + 0.15);
+      }
+
+      // 叠加细微运笔手震
+      dy += 0.15 * Math.sin(t * Math.PI * 3.0 + phase);
+      const y = cy + dy;
+
+      // 模拟真实中性笔落笔顿笔、行笔微压与收笔出锋/回顿的粗细变化 r(t)
+      const baseR = 0.92;
+      const entryTaper = 0.48 + 0.52 * Math.min(1, t / 0.08);
+      const entryPress = 0.22 * Math.exp(-Math.pow((t - 0.09) / 0.065, 2));
+      const exitTaper = (v === 0 || v === 2 || v === 3)
+        ? (0.26 + 0.74 * Math.min(1, (1 - t) / 0.18)) // 明显出锋尖尾收笔
+        : (0.52 + 0.48 * Math.min(1, (1 - t) / 0.10) + 0.16 * Math.exp(-Math.pow((t - 0.91) / 0.055, 2))); // 顿驻圆润收笔
+      const midMod = 1.0 + 0.11 * Math.sin(t * Math.PI * 2.2 + v * 1.3);
+
+      const r = baseR * entryTaper * exitTaper * midMod + entryPress;
+      upperPts.push(`${x.toFixed(2)},${(y - r).toFixed(2)}`);
+      lowerPts.push(`${x.toFixed(2)},${(y + r).toFixed(2)}`);
+    }
+
+    // 构造首尾闭合的变粗细手写墨迹路径
+    const dPath = `M ${upperPts[0]} L ${upperPts.slice(1).join(' L ')} L ${lowerPts.reverse().join(' L ')} Z`;
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('xmlns', svgNS);
+    svg.setAttribute('class', 'handwritten-frac-svg');
+    svg.setAttribute('width', String(w));
+    svg.setAttribute('height', String(svgH));
+    svg.setAttribute('viewBox', `0 0 ${w} ${svgH}`);
+    svg.style.cssText = `position:absolute !important; left:${svgLeft.toFixed(2)}px !important; top:${svgTop.toFixed(2)}px !important; width:${w}px !important; height:${svgH}px !important; overflow:visible !important; display:block !important; pointer-events:none !important;`;
+
+    const pathEl = document.createElementNS(svgNS, 'path');
+    pathEl.setAttribute('d', dPath);
+    pathEl.setAttribute('fill', inkColor);
+    pathEl.style.setProperty('fill', inkColor, 'important');
+    pathEl.style.setProperty('stroke', 'none', 'important');
+
+    svg.appendChild(pathEl);
+    fl.appendChild(svg);
   });
 }
 
@@ -1151,9 +1295,6 @@ export async function generateTypesetImages({
   // ========== 美化根号为 5 套自然手写笔画 ==========
   beautifyRadicals(masterBox);
 
-  // ========== 【分数线稳定渲染】：水平平直与标准内联显示（全平台及 html2canvas 绝对清晰稳定） ==========
-  beautifyFractionLines(masterBox);
-
   // ========== 【避头尾法则 / 标点防孤行】确保标点符号与前字绑定，绝不出现行首孤点 ==========
   const punctRegex = /^[，。、；：？！,.;:?!’”'”）》〉】〕｝]$/;
   const spans = Array.from(masterBox.querySelectorAll('span.f1'));
@@ -1203,6 +1344,9 @@ export async function generateTypesetImages({
   }
   await document.fonts.ready;
   await new Promise(resolve => setTimeout(resolve, 200));
+
+  // ========== 【手写分数线 5 套变体渲染】：在手写公式字体解码完毕后精确测量宽度并生成 5 套手写横画 SVG ==========
+  beautifyFractionLines(masterBox, nonlinearIntensity);
 
   masterBox.querySelectorAll('img').forEach(img => {
     if (!img.classList.contains('uploaded-float')) {

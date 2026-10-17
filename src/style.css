@@ -1332,13 +1332,27 @@ span.f1.math-sym {
   font-style: normal !important;
 }
 
-/* 11. 【核心修复】分数线：保持原生 inline-block 与水平平直，全平台及 html2canvas 绝对清晰稳定 */
+/* 11. 【核心升级】手写分数线：支持 5 套用户手写横画变体 SVG 渲染，保持 inline-block 零高度与基线对齐 */
 .katex .frac-line {
-  border-bottom-style: solid !important;
-  border-bottom-width: 1.2px !important;
-  border-bottom-color: currentColor !important;
+  border: none !important;
+  border-bottom: none !important;
+  background: transparent !important;
   display: inline-block !important;
-  opacity: 0.95;
+  width: 100% !important;
+  height: 0px !important;
+  min-height: 0px !important;
+  position: relative !important;
+  overflow: visible !important;
+  vertical-align: baseline !important;
+  opacity: 0.96;
+}
+.katex .frac-line svg.handwritten-frac-svg {
+  position: absolute !important;
+  left: 0px !important;
+  top: -3.5px !important;
+  overflow: visible !important;
+  display: block !important;
+  pointer-events: none !important;
 }
 
 /* 12. 【核心修复】根号 SVG 柔化与笔墨质感优化 */

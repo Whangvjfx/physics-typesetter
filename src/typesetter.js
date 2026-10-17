@@ -13,6 +13,11 @@ export async function preloadHandwritingFonts() {
     '21px MyHandwriting-Var3',
     '21px MyHandwriting-Var4',
     '21px MyHandwriting-Var5',
+    '21px UserFormula-Var1',
+    '21px UserFormula-Var2',
+    '21px UserFormula-Var3',
+    '21px UserFormula-Var4',
+    '21px UserFormula-Var5',
     '21px Caveat',
     '21px HandwritingGreek'
   ];
@@ -93,11 +98,11 @@ function neutralizeInlineMath(root) {
 }
 
 /**
- * 【手写根号美化核心】将 KaTeX 机械生硬的多边形根号，替换为自然流畅的手写笔画路径
+ * 【手写根号 5 套变体美化核心】复刻用户 iPad 亲笔手写的 5 种根号钩弧形态，按禁忌序列轮换
  */
 function beautifyRadicals(root) {
   const sqrtSvgs = root.querySelectorAll('.katex .sqrt .hide-tail svg');
-  sqrtSvgs.forEach(svg => {
+  sqrtSvgs.forEach((svg, idx) => {
     const viewBox = svg.getAttribute('viewBox');
     if (!viewBox) return;
     const parts = viewBox.trim().split(/\s+/).map(Number);
@@ -108,22 +113,30 @@ function beautifyRadicals(root) {
     const path = svg.querySelector('path');
     if (!path) return;
 
-    // 为每个根号注入微弱的真实书写随机性（笔尖入笔高度与转折起伏）
-    const r1 = (Math.random() - 0.5) * 8;
-    const r2 = (Math.random() - 0.5) * 6;
-    const topY = Math.round(92 + r1);
-    const bottomY = Math.round(H - 42 + r2);
-    const startY = Math.round(H * 0.56 + r1 * 1.5);
+    const v = idx % 5;
+    const r1 = (Math.sin(idx * 1.9 + 0.5)) * 4;
+    const r2 = (Math.cos(idx * 2.3 + 1.1)) * 3;
+    const topY = Math.round(90 + r1);
+    const bottomY = Math.round(H - 38 + r2);
 
-    // 优雅自然的人手执笔连贯路径：
-    // 起笔微带下顿 -> 顺势向右下运笔触底 -> 顿笔回折强力上挑 -> 翻腕过渡进入横向延伸上横线
-    const d = `M 220,${startY} ` +
-      `Q 280,${Math.round(startY + 35)} 355,${Math.round(H * 0.76)} ` +
-      `T 450,${bottomY} ` +
-      `Q 475,${bottomY} 530,${Math.round(H * 0.78)} ` +
-      `T 985,${topY} ` +
-      `Q 1025,${topY - 6} 1090,${topY} ` +
-      `L 400000,${topY}`;
+    // 5 套源自用户 iPad 手写采样表 (Page 13 Row 7) 的差异化根号运笔骨架
+    let d;
+    if (v === 0) {
+      const sY = Math.round(H * 0.58);
+      d = `M 255,${sY} Q 320,${Math.round(H * 0.74)} 425,${bottomY} Q 455,${bottomY} 525,${Math.round(H * 0.72)} T 925,${topY} Q 980,${topY - 4} 1060,${topY} L 400000,${topY}`;
+    } else if (v === 1) {
+      const sY = Math.round(H * 0.54);
+      d = `M 205,${sY + 18} Q 255,${sY - 12} 295,${sY + 10} Q 360,${Math.round(H * 0.78)} 435,${bottomY + 4} Q 465,${bottomY + 4} 540,${Math.round(H * 0.75)} T 965,${topY + 2} L 400000,${topY}`;
+    } else if (v === 2) {
+      const sY = Math.round(H * 0.63);
+      d = `M 280,${sY} L 440,${bottomY - 4} Q 465,${bottomY - 4} 520,${Math.round(H * 0.74)} L 910,${topY - 3} Q 960,${topY - 5} 1040,${topY} L 400000,${topY}`;
+    } else if (v === 3) {
+      const sY = Math.round(H * 0.56);
+      d = `M 235,${sY} Q 315,${Math.round(H * 0.76)} 455,${bottomY + 2} Q 485,${bottomY + 2} 555,${Math.round(H * 0.76)} T 990,${topY + 3} L 400000,${topY}`;
+    } else {
+      const sY = Math.round(H * 0.60);
+      d = `M 265,${sY} Q 330,${Math.round(H * 0.77)} 410,${bottomY - 2} Q 440,${bottomY - 2} 505,${Math.round(H * 0.71)} T 895,${topY - 2} Q 950,${topY - 4} 1035,${topY} L 400000,${topY}`;
+    }
 
     path.setAttribute('d', d);
     path.style.setProperty('fill', 'none', 'important');
@@ -677,12 +690,247 @@ function createNonlinearChineseCharGenerator(nonlinearIntensity = 0.60) {
 
       const glyphClass = `glyph-v${variantIndex}`;
       return `<span class="f1 organic-char ${glyphClass}" style="display:inline-block; vertical-align:baseline; font-size:1.5em; line-height:21px !important; margin-right:${marginR}px; margin-left:${marginL}px; opacity:${effectiveOpacity}; ${fontCSS} ${colorCSS} ${strokeCSS} ${shadowCSS} ${originCSS} ${transform}">${char}</span>`;
+    },
+
+    /**
+     * 【公式内部汉字轮换引擎】：按完全相同的禁忌队列逻辑在 6 套手写汉字字体间随机轮换
+     */
+    createFormulaChineseSpan: (char, isHighlight = false) => {
+      const count = charOccurMap.get(char) || 0;
+      charOccurMap.set(char, count + 1);
+      const seq = chineseCharSeq++;
+
+      let variantIndex = 0;
+      if (K > 0.05) {
+        const charTabu = charTabuMap.get(char) || [];
+        const allVariants = [0, 1, 2, 3, 4, 5];
+        let candidates = allVariants.filter(v => !charTabu.includes(v));
+        if (candidates.length === 0) {
+          const lastUsed = charTabu[charTabu.length - 1];
+          candidates = allVariants.filter(v => v !== lastUsed);
+          charTabu.length = 0;
+          charTabu.push(lastUsed);
+        }
+        if (candidates.length > 1 && globalRecentQueue.length > 0) {
+          const lastGlobal = globalRecentQueue[globalRecentQueue.length - 1];
+          const nonAdjacent = candidates.filter(v => v !== lastGlobal);
+          if (nonAdjacent.length > 0) candidates = nonAdjacent;
+        }
+        if (charTabu.length > 0) {
+          const lastUsedForThisChar = charTabu[charTabu.length - 1];
+          const strictlyDifferent = candidates.filter(v => v !== lastUsedForThisChar);
+          if (strictlyDifferent.length > 0) candidates = strictlyDifferent;
+        }
+        const randIdx = Math.floor(hash32(char.charCodeAt(0), seq, count, 73) * candidates.length);
+        variantIndex = candidates[Math.min(candidates.length - 1, Math.max(0, randIdx))];
+
+        charTabu.push(variantIndex);
+        if (charTabu.length > 5) charTabu.shift();
+        charTabuMap.set(char, charTabu);
+
+        globalRecentQueue.push(variantIndex);
+        if (globalRecentQueue.length > 3) globalRecentQueue.shift();
+      }
+
+      const variantStrokeMap = [0.18, 0.0, 0.14, 0.0, 0.0, 0.08];
+      const variantScaleMap = [1.01, 0.975, 1.01, 0.975, 1.00, 1.00];
+      const vStroke = variantStrokeMap[variantIndex] || 0.0;
+      const vScale = variantScaleMap[variantIndex] || 1.0;
+
+      const fontFamilies = [
+        "'MyHandwriting', 'KaiTi', '楷体', serif",
+        "'MyHandwriting-Var1', 'MyHandwriting', 'KaiTi', '楷体', serif",
+        "'MyHandwriting-Var2', 'MyHandwriting', 'KaiTi', '楷体', serif",
+        "'MyHandwriting-Var3', 'MyHandwriting', 'KaiTi', '楷体', serif",
+        "'MyHandwriting-Var4', 'MyHandwriting', 'KaiTi', '楷体', serif",
+        "'MyHandwriting-Var5', 'MyHandwriting', 'KaiTi', '楷体', serif"
+      ];
+
+      const rot = ((hash32(char.charCodeAt(0), seq, 11, 19) - 0.5) * 4.5 * K).toFixed(2);
+      const dy = ((hash32(char.charCodeAt(0), seq, 23, 31) - 0.5) * 1.1 * K).toFixed(2);
+      const sc = (vScale * (1.0 + (hash32(char.charCodeAt(0), seq, 41, 59) - 0.5) * 0.04 * K)).toFixed(3);
+
+      const span = document.createElement('span');
+      span.className = `cjk-formula-char glyph-v${variantIndex}`;
+      let styleStr = `display:inline-block; font-family:${fontFamilies[variantIndex]} !important; font-style:normal !important; transform:translateY(${dy}px) rotate(${rot}deg) scale(${sc});`;
+      if (vStroke > 0.02) {
+        styleStr += ` -webkit-text-stroke:${vStroke.toFixed(2)}px currentColor;`;
+      }
+      if (isHighlight) {
+        styleStr += ' text-shadow: 0 0 0.35px rgba(211, 47, 47, 0.25);';
+      } else {
+        styleStr += ' text-shadow: 0 0 0.35px rgba(18, 20, 24, 0.22);';
+      }
+      span.setAttribute('style', styleStr);
+      span.textContent = char;
+      return span;
     }
   };
 }
 
 // 兼容别名
 const createOrganicChineseCharGenerator = createNonlinearChineseCharGenerator;
+
+/**
+ * 【用户亲笔 5 套公式符号变体轮换引擎】(UserFormula 5-Variant Tabu Engine)
+ * 将用户 iPad 手写的 125 类符号 (各 5 套变体: UserFormula-Var1 ~ Var5) 按单符号历史禁忌队列动态轮换，
+ * 确保同一公式及上下文中重复出现的数字、拉丁字母、希腊字母、运算符、括号绝不雷同。
+ */
+function createUserFormulaVariantEngine(nonlinearIntensity = 0.60) {
+  const K = Math.max(0.0, Math.min(1.0, Number(nonlinearIntensity) ?? 0.60));
+  const symbolTabuMap = new Map(); // 每个符号的历史禁忌队列 (容量 4，保证连续 5 次出现 100% 选用不同变体)
+  const symbolOccurMap = new Map();
+  let symbolSeq = 0;
+  let lastGlobalVar = 0;
+
+  // 判断普通文本中的非中文字符是否属于用户手写 125 符号集
+  const plainFormulaSymRegex = /^[0-9a-zA-Zα-ωΑ-Ω+−\-=≠≈∼~<>≤≥≪≫±∓×÷·.∝→∞ħ∂⊥∥()[\]{}∑∫∮√′″'°∘%/:,]$/;
+
+  const pickVariant = (ch) => {
+    // 统一同义字符键（如 '-' 与 '−' 共享禁忌队列，确保连续减号必定不同）
+    const key = (ch === '-' || ch === '–') ? '−' : ch;
+    const count = symbolOccurMap.get(key) || 0;
+    symbolOccurMap.set(key, count + 1);
+    const seq = symbolSeq++;
+
+    const tabu = symbolTabuMap.get(key) || [];
+    const allVars = [1, 2, 3, 4, 5];
+
+    // 1. 过滤该符号最近使用过的变体（容量 4，确保连续 5 次出现绝对不重复）
+    let candidates = allVars.filter(v => !tabu.includes(v));
+    if (candidates.length === 0) {
+      const lastUsed = tabu[tabu.length - 1];
+      candidates = allVars.filter(v => v !== lastUsed);
+      tabu.length = 0;
+      if (lastUsed) tabu.push(lastUsed);
+    }
+
+    // 2. 在有多个候选时，尽量避免与紧邻的前一个符号使用同一套变体号
+    if (candidates.length > 1 && lastGlobalVar > 0) {
+      const nonAdj = candidates.filter(v => v !== lastGlobalVar);
+      if (nonAdj.length > 0) candidates = nonAdj;
+    }
+
+    const r = hash32(key.charCodeAt(0), seq, count, 137);
+    const chosen = candidates[Math.min(candidates.length - 1, Math.floor(r * candidates.length))];
+
+    tabu.push(chosen);
+    if (tabu.length > 4) tabu.shift();
+    symbolTabuMap.set(key, tabu);
+    lastGlobalVar = chosen;
+
+    // 计算细微自然手写浮动（对等号/减号等水平关系符收敛幅度，保持公式整洁）
+    const isHorizOp = /^[=−\-≈∼≤≥≠→]$/.test(ch);
+    const rotAmp = isHorizOp ? 0.65 : 1.35;
+    const dyAmp = isHorizOp ? 0.30 : 0.55;
+    const scAmp = isHorizOp ? 0.015 : 0.026;
+
+    const rot = ((hash32(key.charCodeAt(0), seq, 17, 29) - 0.5) * 2 * rotAmp * K).toFixed(2);
+    const dy = ((hash32(key.charCodeAt(0), seq, 37, 53) - 0.5) * 2 * dyAmp * K).toFixed(2);
+    const sc = (1.0 + (hash32(key.charCodeAt(0), seq, 61, 89) - 0.5) * 2 * scAmp * K).toFixed(3);
+
+    return {
+      variantIndex: chosen,
+      fontFamily: `'UserFormula-Var${chosen}', 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive`,
+      rot,
+      dy,
+      sc
+    };
+  };
+
+  return {
+    isPlainFormulaSymbol: (ch) => plainFormulaSymRegex.test(ch),
+
+    formatPlainSymbol: (ch, isHighlight = false) => {
+      const { variantIndex, fontFamily } = pickVariant(ch);
+      const shadowCSS = isHighlight
+        ? 'text-shadow: 0 0 0.35px rgba(211, 47, 47, 0.25);'
+        : 'text-shadow: 0 0 0.35px rgba(18, 20, 24, 0.22);';
+      return `<span class="f1 uf-char uf-var${variantIndex}" style="font-family:${fontFamily} !important; font-style:normal !important; font-size:1.38em; line-height:21px !important; vertical-align:baseline; color:inherit; -webkit-text-stroke:0.15px currentColor; ${shadowCSS}">${ch}</span>`;
+    },
+
+    applyToKaTeX: (root, organicEngine) => {
+      const katexHtmlList = root.querySelectorAll('.katex-html');
+      katexHtmlList.forEach(kHtml => {
+        const isHighlight = Boolean(kHtml.closest('.highlight'));
+
+        // Step 1: 将 KaTeX 用私有区斜杠 \uE020 叠加渲染的 \neq 替换为纯净的 ≠ (U+2260)，直接调用用户手写的 5 套 ≠
+        kHtml.querySelectorAll('.mrel').forEach(mrel => {
+          if (!mrel.querySelector('.mrel') && mrel.textContent.includes('\uE020')) {
+            mrel.textContent = '≠';
+          } else if (!mrel.querySelector('.mrel') && mrel.querySelector('.rlap') && mrel.textContent.includes('→')) {
+            mrel.textContent = '→';
+          }
+        });
+
+        // Step 2: 收集所有可渲染文本节点（跳过 svg, .vlist-s, .strut, .pstrut, .nulldelimiter, .frac-line 及复合箭头拼接件）
+        const textNodes = [];
+        const walker = document.createTreeWalker(kHtml, NodeFilter.SHOW_TEXT, null);
+        let node;
+        while ((node = walker.nextNode())) {
+          const parent = node.parentElement;
+          if (!parent) continue;
+          if (parent.closest('svg, .vlist-s, .nulldelimiter, .strut, .pstrut, .frac-line, .katex-mathml, .relbar')) {
+            continue;
+          }
+          const mrelAncestor = parent.closest('.mrel');
+          if (mrelAncestor && mrelAncestor.querySelector('.rlap')) {
+            continue;
+          }
+          if (!node.nodeValue || !node.nodeValue.trim() || node.nodeValue === '\u200b') {
+            continue;
+          }
+          textNodes.push(node);
+        }
+
+        // Step 3: 逐字符拆解并注入 5 套符号变体或 6 套汉字变体
+        textNodes.forEach(tn => {
+          const parent = tn.parentElement;
+          const inOpSymbol = Boolean(parent && parent.closest('.op-symbol'));
+          const inSupSub = Boolean(parent && parent.closest('.msupsub'));
+          // 将连续两个单撇号 ′′ (\u2032\u2032) 合并为用户手写的双撇号 ″ (\u2033)
+          const normalizedStr = tn.nodeValue.replace(/\u2032\u2032/g, '\u2033');
+          const chars = Array.from(normalizedStr);
+
+          const frag = document.createDocumentFragment();
+          chars.forEach(ch => {
+            if (!ch.trim() || ch === '\u200b' || ch === '\u00a0') {
+              frag.appendChild(document.createTextNode(ch));
+              return;
+            }
+            if (/[\u4e00-\u9fa5]/.test(ch)) {
+              frag.appendChild(organicEngine.createFormulaChineseSpan(ch, isHighlight));
+              return;
+            }
+
+            const { variantIndex, fontFamily, rot, dy, sc } = pickVariant(ch);
+            const span = document.createElement('span');
+            span.className = `uf-char uf-var${variantIndex}`;
+            const shadowCSS = isHighlight
+              ? 'text-shadow: 0 0 0.35px rgba(211, 47, 47, 0.25);'
+              : 'text-shadow: 0 0 0.35px rgba(18, 20, 24, 0.22);';
+
+            if (inOpSymbol) {
+              // 大算子 (\sum, \int, \oint) 保持 inline 以严格遵循 KaTeX .op-symbol 的数学轴垂直居中偏移
+              span.setAttribute('style', `font-family:${fontFamily} !important; font-style:normal !important; -webkit-text-stroke:0.15px currentColor; ${shadowCSS}`);
+            } else if (inSupSub) {
+              // 上下标内字符保持极轻微扰动与适度描边，确保小字号下依然饱满清晰
+              const subDy = (parseFloat(dy) * 0.45).toFixed(2);
+              const subRot = (parseFloat(rot) * 0.55).toFixed(2);
+              span.setAttribute('style', `display:inline-block; font-family:${fontFamily} !important; font-style:normal !important; -webkit-text-stroke:0.12px currentColor; ${shadowCSS} transform:translateY(${subDy}px) rotate(${subRot}deg);`);
+            } else {
+              span.setAttribute('style', `display:inline-block; font-family:${fontFamily} !important; font-style:normal !important; -webkit-text-stroke:0.16px currentColor; ${shadowCSS} transform:translateY(${dy}px) rotate(${rot}deg) scale(${sc});`);
+            }
+            span.textContent = ch;
+            frag.appendChild(span);
+          });
+
+          parent.replaceChild(frag, tn);
+        });
+      });
+    }
+  };
+}
 
 /**
  * 核心排版引擎 (V2 拟真手写版 - Organic Typesetting Engine)
@@ -794,9 +1042,6 @@ export async function generateTypesetImages({
   }
   let safeText = mathParts.join('');
 
-  // 4. 数字 1 转小写字母 l (遵循原项目设定)
-  safeText = safeText.replace(/1/g, 'l');
-
   onProgress({ stage: 'preprocessing', message: '正在进行文本预处理与拟真分词...' });
   await new Promise(r => setTimeout(r, 60));
 
@@ -828,8 +1073,9 @@ export async function generateTypesetImages({
     .replace(/(<br>)+/g, '<br>')
     .replace(/^<br>|<br>$/g, '');
 
-  // ========== 汉字专属非线性动力学打散引擎 ==========
+  // ========== 汉字专属非线性动力学打散引擎 + 用户亲笔 5 套公式符号变体引擎 ==========
   const organicEngine = createNonlinearChineseCharGenerator(nonlinearIntensity);
+  const formulaEngine = createUserFormulaVariantEngine(nonlinearIntensity);
   const tokenRegex = /(<[^>]+>)|(\$\$[\s\S]*?\$\$|\$[^$]*?\$)|([\s\S])/g;
   let randomizedText = '';
   let match;
@@ -847,7 +1093,7 @@ export async function generateTypesetImages({
       }
       randomizedText += tag;
     } else if (match[2]) {
-      randomizedText += match[2]; // 公式区域原样放行，交由后续 KaTeX 渲染（完全保持原样）
+      randomizedText += match[2]; // 公式区域交由后续 KaTeX 渲染及 5 套变体逐字符注入
     } else if (match[3]) {
       let char = match[3];
       if (/[，。、；：？！,.;:?!]/.test(char)) {
@@ -857,13 +1103,14 @@ export async function generateTypesetImages({
         randomizedText += char;
       } else {
         if (/[\u4e00-\u9fa5]/.test(char)) {
-          // 【核心】：仅汉字应用拟真手写扰动（基线浮动、倾斜、大小微差、字距松紧、同字异构、微洇）
+          // 【核心】：汉字完全保持原有非线性动力学拟真手写设置不变
           randomizedText += organicEngine.formatChar(char, isHighlight);
+        } else if (formulaEngine.isPlainFormulaSymbol(char)) {
+          // 【核心】：普通文本中直接书写的数字、字母、物理符号同样接入用户亲笔 5 套变体轮换
+          randomizedText += formulaEngine.formatPlainSymbol(char, isHighlight);
         } else if (/[≠≤≥≈±×÷∝∞°′″∠△⊥∈∑∫√~]/.test(char)) {
-          // 【核心】：物理数学运算符与特殊符号，优先调用手写希腊体与手写符号
-          randomizedText += `<span class="f1 math-sym" style="font-family:'HandwritingGreek', 'Caveat', 'KaTeX_Main', 'MyHandwriting', sans-serif; font-size:1.35em; line-height:21px !important; vertical-align:baseline; color:inherit;">${char}</span>`;
+          randomizedText += `<span class="f1 math-sym" style="font-family:'UserFormula-Var1', 'HandwritingGreek', 'Caveat', 'KaTeX_Main', 'MyHandwriting', sans-serif; font-size:1.35em; line-height:21px !important; vertical-align:baseline; color:inherit;">${char}</span>`;
         } else {
-          // 【核心】：非汉字（希腊字母、英文字母、数字、西文标点）无缝调用 Caveat + HandwritingGreek 手写体
           randomizedText += `<span class="f1" style="font-family:'Caveat', 'HandwritingGreek', 'MyHandwriting', sans-serif; font-size:1.35em; line-height:21px !important; color:inherit;">${char}</span>`;
         }
       }
@@ -898,7 +1145,10 @@ export async function generateTypesetImages({
     }
   });
 
-  // ========== 美化根号为自然手写笔画 ==========
+  // ========== 【核心新特性】：将公式内所有符号接入用户 iPad 亲笔 5 套变体，公式内汉字接入 6 套手写汉字轮换 ==========
+  formulaEngine.applyToKaTeX(masterBox, organicEngine);
+
+  // ========== 美化根号为 5 套自然手写笔画 ==========
   beautifyRadicals(masterBox);
 
   // ========== 【分数线稳定渲染】：水平平直与标准内联显示（全平台及 html2canvas 绝对清晰稳定） ==========
@@ -937,11 +1187,17 @@ export async function generateTypesetImages({
   // ========== 【V4 纸张纤维微洇】：注入微观纸张物理质感 SVG 滤镜 ==========
   ensureInkBleedFilter(captureZone, nonlinearIntensity);
 
-  // 强制显式预加载与解码全部 6 套变体中文字体族、西文手写体与希腊体，杜绝 html2canvas 异步绘制时字形回退降级为同一基准字体
+  // 强制显式预加载与解码全部 6 套变体中文字体族、5 套用户手写公式变体字库，杜绝 html2canvas 异步绘制回退
   await preloadHandwritingFonts();
   await document.fonts.ready;
   let fontWaitCount = 0;
-  while ((!document.fonts.check('21px MyHandwriting-Var1') || !document.fonts.check('21px MyHandwriting-Var2') || !document.fonts.check('21px MyHandwriting-Var4')) && fontWaitCount < 20) {
+  while (
+    (!document.fonts.check('21px MyHandwriting-Var1') ||
+     !document.fonts.check('21px MyHandwriting-Var4') ||
+     !document.fonts.check('21px UserFormula-Var1') ||
+     !document.fonts.check('21px UserFormula-Var5')) &&
+    fontWaitCount < 25
+  ) {
     await new Promise(r => setTimeout(r, 100));
     fontWaitCount++;
   }

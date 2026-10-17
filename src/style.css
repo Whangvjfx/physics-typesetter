@@ -117,6 +117,47 @@
   font-display: swap;
 }
 
+/* 用户 iPad 亲笔手写 5 套物理公式变体符号库 (UserFormula-Var1 ~ Var5) */
+@font-face {
+  font-family: 'UserFormula-Var1';
+  src: url('/fonts/UserFormula-Var1.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'UserFormula-Var2';
+  src: url('/fonts/UserFormula-Var2.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'UserFormula-Var3';
+  src: url('/fonts/UserFormula-Var3.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'UserFormula-Var4';
+  src: url('/fonts/UserFormula-Var4.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'UserFormula-Var5';
+  src: url('/fonts/UserFormula-Var5.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ==========================================================================
    2. 主题变量定义：黑夜模式 (Dark) 与 清爽绿意白天模式 (Light)
    ========================================================================== */
@@ -1175,14 +1216,15 @@ span.f1.math-sym {
   font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', "KaiTi", cursive !important;
 }
 
-/* 消除手写体（如 Caveat 的 t 悬臂、r 突起、R 腿部等）与右上标/右下标的视觉重叠撞击 */
+/* 消除手写体与右上标/右下标的视觉重叠，同时保持自然紧凑 */
 .katex .msupsub {
-  margin-left: 0.16em !important;
+  margin-left: 0.08em !important;
 }
 
 /* 4. 【核心修复】公式中普通数字、数值、常数与量纲单位（如 20 N, 10 N, 5 J, 30°, 分数 1/2, 根号下数值等）手写化 */
 .katex .mord:not(.katex-vbox):not(.katex-vbox *):not(.svg-align):not(.hide-tail):not(.hide-tail *):not(.sqrt) {
-  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+  font-family: 'UserFormula-Var1', 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+  font-style: normal !important;
 }
 
 /* 5. 【核心修复】公式中出现的中文汉字（如 W_合, F_拉, \text{总功} 等）严格应用手写字体 */
@@ -1196,13 +1238,14 @@ span.f1.math-sym {
 .katex .mathrm *,
 .katex .text,
 .katex .text * {
-  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+  font-family: 'UserFormula-Var1', 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
   font-style: normal !important;
 }
 
 /* 7. 【核心修复】关系符（等号 =、大于 >、小于 <、约等于 ≈、小于等于 ≤、大于等于 ≥ 等）全量手写化 */
 .katex .mrel:not(.katex-vbox *) {
-  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', 'KaTeX_Main', cursive !important;
+  font-family: 'UserFormula-Var1', 'Caveat', 'HandwritingGreek', 'MyHandwriting', 'KaTeX_Main', cursive !important;
+  font-style: normal !important;
 }
 
 /* 保护 \neq 的私有区斜杠符号 U+E020，确保其始终从 KaTeX 原生符号库提取绘制 */
@@ -1215,18 +1258,78 @@ span.f1.math-sym {
 
 /* 8. 【核心修复】二元运算符（加 +、减 −、乘 ×、除 ÷、点乘 ·、正负 ± 等）手写化 */
 .katex .mbin {
-  font-family: 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+  font-family: 'UserFormula-Var1', 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+  font-style: normal !important;
 }
 
 /* 9. 【核心修复】定界符与圆括号、方括号（如 (, ), [, ], {, }）手写化 */
 .katex .mopen,
 .katex .mclose {
-  font-family: 'Caveat', 'HandwritingGreek', cursive !important;
+  font-family: 'UserFormula-Var1', 'Caveat', 'HandwritingGreek', cursive !important;
+  font-style: normal !important;
 }
 
 /* 10. 标点符号（逗号 ,、冒号 :）手写化 */
 .katex .mpunct {
-  font-family: 'Caveat', 'HandwritingGreek', cursive !important;
+  font-family: 'UserFormula-Var1', 'Caveat', 'HandwritingGreek', cursive !important;
+  font-style: normal !important;
+}
+
+/* 10.1 【用户亲笔 5 套公式符号变体动态轮换映射类】(UserFormula-Var1 ~ Var5) */
+.uf-char,
+.katex .uf-char,
+.katex .msupsub .uf-char,
+.katex .text .uf-char,
+.katex .mathrm .uf-char {
+  font-style: normal !important;
+  font-weight: normal !important;
+}
+
+.uf-var1, .katex .uf-var1, .katex .msupsub .uf-var1, .katex .text .uf-var1, .katex .op-symbol .uf-var1 {
+  font-family: 'UserFormula-Var1', 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+  font-style: normal !important;
+}
+.uf-var2, .katex .uf-var2, .katex .msupsub .uf-var2, .katex .text .uf-var2, .katex .op-symbol .uf-var2 {
+  font-family: 'UserFormula-Var2', 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+  font-style: normal !important;
+}
+.uf-var3, .katex .uf-var3, .katex .msupsub .uf-var3, .katex .text .uf-var3, .katex .op-symbol .uf-var3 {
+  font-family: 'UserFormula-Var3', 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+  font-style: normal !important;
+}
+.uf-var4, .katex .uf-var4, .katex .msupsub .uf-var4, .katex .text .uf-var4, .katex .op-symbol .uf-var4 {
+  font-family: 'UserFormula-Var4', 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+  font-style: normal !important;
+}
+.uf-var5, .katex .uf-var5, .katex .msupsub .uf-var5, .katex .text .uf-var5, .katex .op-symbol .uf-var5 {
+  font-family: 'UserFormula-Var5', 'Caveat', 'HandwritingGreek', 'MyHandwriting', cursive !important;
+  font-style: normal !important;
+}
+
+/* 10.2 【公式内部汉字 6 套手写字体动态轮换映射类】 */
+.katex .cjk-formula-char.glyph-v0, .katex .msupsub .cjk-formula-char.glyph-v0, .katex .cjk_fallback .cjk-formula-char.glyph-v0 {
+  font-family: 'MyHandwriting', "KaiTi", "楷体", serif !important;
+  font-style: normal !important;
+}
+.katex .cjk-formula-char.glyph-v1, .katex .msupsub .cjk-formula-char.glyph-v1, .katex .cjk_fallback .cjk-formula-char.glyph-v1 {
+  font-family: 'MyHandwriting-Var1', 'MyHandwriting', "KaiTi", "楷体", serif !important;
+  font-style: normal !important;
+}
+.katex .cjk-formula-char.glyph-v2, .katex .msupsub .cjk-formula-char.glyph-v2, .katex .cjk_fallback .cjk-formula-char.glyph-v2 {
+  font-family: 'MyHandwriting-Var2', 'MyHandwriting', "KaiTi", "楷体", serif !important;
+  font-style: normal !important;
+}
+.katex .cjk-formula-char.glyph-v3, .katex .msupsub .cjk-formula-char.glyph-v3, .katex .cjk_fallback .cjk-formula-char.glyph-v3 {
+  font-family: 'MyHandwriting-Var3', 'MyHandwriting', "KaiTi", "楷体", serif !important;
+  font-style: normal !important;
+}
+.katex .cjk-formula-char.glyph-v4, .katex .msupsub .cjk-formula-char.glyph-v4, .katex .cjk_fallback .cjk-formula-char.glyph-v4 {
+  font-family: 'MyHandwriting-Var4', 'MyHandwriting', "KaiTi", "楷体", serif !important;
+  font-style: normal !important;
+}
+.katex .cjk-formula-char.glyph-v5, .katex .msupsub .cjk-formula-char.glyph-v5, .katex .cjk_fallback .cjk-formula-char.glyph-v5 {
+  font-family: 'MyHandwriting-Var5', 'MyHandwriting', "KaiTi", "楷体", serif !important;
+  font-style: normal !important;
 }
 
 /* 11. 【核心修复】分数线：保持原生 inline-block 与水平平直，全平台及 html2canvas 绝对清晰稳定 */

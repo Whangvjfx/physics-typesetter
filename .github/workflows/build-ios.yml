@@ -2,7 +2,7 @@ name: Build iOS IPA
 
 on:
   push:
-    branches: [ main, master, feature/organic-handwriting, feature/nonlinear ]
+    branches: [ main, master, feature/organic-handwriting, feature/nonlinear, feature/ios-formula-variants ]
     tags:
       - 'v*'
   workflow_dispatch:
@@ -53,12 +53,12 @@ jobs:
         run: |
           mkdir -p Payload
           cp -r ios/App/build/Build/Products/Release-iphoneos/App.app Payload/
-          zip -r PhysicsTypesetter-Nonlinear.ipa Payload
-          ls -lh PhysicsTypesetter-Nonlinear.ipa
+          zip -r PhysicsTypesetter-FormulaVariants.ipa Payload
+          ls -lh PhysicsTypesetter-FormulaVariants.ipa
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PhysicsTypesetter-Nonlinear-iOS-IPA
-          path: PhysicsTypesetter-Nonlinear.ipa
+          name: PhysicsTypesetter-FormulaVariants-iOS-IPA
+          path: PhysicsTypesetter-FormulaVariants.ipa
           retention-days: 30
